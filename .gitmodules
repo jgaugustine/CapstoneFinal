@@ -1,0 +1,3 @@
+[submodule "BitDepthVisualizer"]
+	path = BitDepthVisualizer
+	url = https://github.com/jgaugustine/BitDepthVisualizer.git
