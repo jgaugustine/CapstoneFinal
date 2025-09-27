@@ -1,3 +1,6 @@
 [submodule "BitDepthVisualizer"]
 	path = BitDepthVisualizer
 	url = https://github.com/jgaugustine/BitDepthVisualizer.git
+[submodule "PhotonSimulation"]
+	path = PhotonSimulation
+	url = https://github.com/jgaugustine/PhotonSimulation.git
