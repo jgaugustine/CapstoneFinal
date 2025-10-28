@@ -4,3 +4,7 @@
 [submodule "PhotonSimulation"]
 	path = PhotonSimulation
 	url = https://github.com/jgaugustine/PhotonSimulation.git
+[submodule "ImageLab"]
+	path = ImageLab
+	url = https://github.com/jgaugustine/cp-imagelab.git
+	branch = main
