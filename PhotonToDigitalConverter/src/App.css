@@ -1,0 +1,82 @@
+/* App-specific styles */
+.animation-container {
+  position: relative;
+  overflow: hidden;
+}
+
+.photon-trail {
+  position: absolute;
+  width: 2px;
+  height: 2px;
+  border-radius: 50%;
+  background: hsl(var(--photon));
+  box-shadow: 0 0 6px hsl(var(--photon-glow));
+  animation: photon-move var(--animation-photon) ease-in forwards;
+}
+
+@keyframes photon-move {
+  from {
+    opacity: 1;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(100px);
+  }
+}
+
+.pixel-well {
+  position: relative;
+  border: 1px solid hsl(var(--border));
+  background: hsl(var(--muted));
+  transition: all var(--animation-charge);
+}
+
+.pixel-well.filled {
+  background: var(--gradient-pixel-well);
+  box-shadow: inset 0 0 10px hsl(var(--charge-glow) / 0.3);
+}
+
+.pixel-well.saturated {
+  background: linear-gradient(to top, hsl(var(--overflow)), hsl(var(--charge)));
+  box-shadow: 0 0 15px hsl(var(--overflow) / 0.5);
+}
+
+.digital-value {
+  font-family: 'Courier New', monospace;
+  font-size: 0.75rem;
+  color: hsl(var(--digital));
+  text-shadow: 0 0 5px hsl(var(--digital-glow) / 0.5);
+}
+
+.readout-chain {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem;
+  background: hsl(var(--card));
+  border-radius: var(--radius);
+  border: 1px solid hsl(var(--border));
+}
+
+.readout-step {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem;
+  background: hsl(var(--muted));
+  border-radius: var(--radius);
+  min-width: 80px;
+}
+
+.readout-step.active {
+  background: hsl(var(--accent));
+  color: hsl(var(--accent-foreground));
+  box-shadow: 0 0 10px hsl(var(--accent) / 0.3);
+}
+
+.arrow {
+  font-size: 1.5rem;
+  color: hsl(var(--muted-foreground));
+}
