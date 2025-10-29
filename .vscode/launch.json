@@ -42,7 +42,7 @@
         "type": "node-terminal",
         "request": "launch",
         "name": "Dev: PhotonToDigitalConverter",
-        "cwd": "${workspaceFolder}/PhotonToDigitalConverter",
+        "cwd": "${workspaceFolder}/BitDepthVisualizer",
         "command": "bun run dev",
         "serverReadyAction": {
           "pattern": "Local:.*(https?://.*)",

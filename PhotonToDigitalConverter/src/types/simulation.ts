@@ -16,6 +16,10 @@ export interface Pixel {
   digitalValue: number
   saturated: boolean
   lastUpdate: number
+  // Visualization helpers for recent impacts
+  lastHitTime?: number
+  recentHits?: number
+  showUntil?: number
 }
 
 export interface SimulationState {

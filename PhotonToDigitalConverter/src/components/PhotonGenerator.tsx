@@ -1,17 +1,18 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useCallback } from 'react'
 import { Photon } from '../types/simulation'
 import { wavelengthToRGB } from '../lib/utils'
 
 interface PhotonGeneratorProps {
-  photons: Photon[]
+  photons: (Photon & { spawnTime?: number; arrivalTime: number })[]
   isRunning: boolean
   phase: 'integration' | 'readout' | 'complete'
 }
 
 export default function PhotonGenerator({ photons, isRunning, phase }: PhotonGeneratorProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
+  const animationRef = useRef<number>()
 
-  useEffect(() => {
+  const drawPhotons = useCallback(() => {
     const canvas = canvasRef.current
     if (!canvas) return
 
@@ -25,42 +26,63 @@ export default function PhotonGenerator({ photons, isRunning, phase }: PhotonGen
     // Clear canvas
     ctx.clearRect(0, 0, canvas.width, canvas.height)
 
-    // Draw photons
-    photons.forEach(photon => {
-      if (phase === 'integration' || photon.arrivalTime < 0.1) {
+    // Draw photons with vertical motion from spawn to arrival
+    if (phase === 'integration') {
+      const now = performance.now() / 1000
+      photons.forEach(photon => {
+        const spawnTime = photon.spawnTime ?? now
+        const travel = Math.max(0, Math.min(1, (now - spawnTime) / 0.6))
+        const y = travel * canvas.height
         const color = wavelengthToRGB(photon.wavelength)
-        const alpha = Math.max(0, 1 - (photon.arrivalTime * 2)) // Fade out over time
+        const alpha = 0.8 + 0.2 * (1 - travel)
         
         ctx.save()
         ctx.globalAlpha = alpha
         ctx.fillStyle = color
         ctx.shadowColor = color
-        ctx.shadowBlur = 8
+        ctx.shadowBlur = 6
         ctx.beginPath()
-        ctx.arc(photon.x, photon.y, 2, 0, 2 * Math.PI)
+        ctx.arc(photon.x, y, 3, 0, 2 * Math.PI)
         ctx.fill()
         ctx.restore()
-      }
-    })
-
-    // Draw photon trails for moving photons
-    if (isRunning && phase === 'integration') {
-      ctx.save()
-      ctx.strokeStyle = 'hsl(var(--photon))'
-      ctx.lineWidth = 1
-      ctx.globalAlpha = 0.6
-      
-      photons.slice(-50).forEach(photon => {
-        if (photon.y < 200) { // Only draw trails for photons still moving
-          ctx.beginPath()
-          ctx.moveTo(photon.x, photon.y)
-          ctx.lineTo(photon.x, photon.y + 20)
-          ctx.stroke()
-        }
       })
-      ctx.restore()
+
+      // Draw photon trails for moving photons
+      if (isRunning) {
+        ctx.save()
+        ctx.strokeStyle = 'hsl(var(--photon))'
+        ctx.lineWidth = 1
+        ctx.globalAlpha = 0.4
+        
+        photons.slice(-50).forEach(photon => {
+          const spawnTime = photon.spawnTime ?? now
+          const travel = Math.max(0, Math.min(1, (now - spawnTime) / 0.6))
+          const y = travel * canvas.height
+          const y2 = Math.max(0, y - 15)
+          ctx.beginPath()
+          ctx.moveTo(photon.x, y2)
+          ctx.lineTo(photon.x, y)
+          ctx.stroke()
+        })
+        ctx.restore()
+      }
+    }
+
+    // Continue animation if running
+    if (isRunning && phase === 'integration') {
+      animationRef.current = requestAnimationFrame(drawPhotons)
     }
   }, [photons, isRunning, phase])
+
+  useEffect(() => {
+    drawPhotons()
+    
+    return () => {
+      if (animationRef.current) {
+        cancelAnimationFrame(animationRef.current)
+      }
+    }
+  }, [drawPhotons])
 
   return (
     <div className="relative w-full h-64 bg-gradient-to-b from-transparent to-muted/20 rounded-lg overflow-hidden">

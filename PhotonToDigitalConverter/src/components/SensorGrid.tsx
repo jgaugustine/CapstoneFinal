@@ -5,9 +5,10 @@ interface SensorGridProps {
   pixels: Pixel[][]
   parameters: SimulationParameters
   phase: 'integration' | 'readout' | 'complete'
+  currentTime?: number
 }
 
-export default function SensorGrid({ pixels, parameters, phase }: SensorGridProps) {
+export default function SensorGrid({ pixels, parameters, phase, currentTime = 0 }: SensorGridProps) {
   const maxElectrons = parameters.fullWellCapacity
   const bitDepth = parameters.bitDepth
   const maxDN = Math.pow(2, bitDepth) - 1
@@ -75,6 +76,23 @@ export default function SensorGrid({ pixels, parameters, phase }: SensorGridProp
                   : undefined
               }}
             >
+              {/* Impact flash */}
+              {pixel.showUntil && currentTime <= pixel.showUntil && (
+                <div
+                  className="absolute inset-0 pointer-events-none"
+                  style={{
+                    boxShadow: '0 0 12px 4px hsl(var(--photon-glow) / 0.6)',
+                    borderRadius: 2,
+                  }}
+                />
+              )}
+
+              {/* Hit counter overlay */}
+              {pixel.showUntil && currentTime <= pixel.showUntil && (
+                <div className="absolute -top-3 -left-3 px-1.5 py-0.5 text-[10px] rounded bg-primary text-primary-foreground shadow" >
+                  +{pixel.recentHits ?? 1}
+                </div>
+              )}
               {/* Electron count indicator */}
               {pixel.electronCount > 0 && (
                 <div className="absolute inset-0 flex items-center justify-center">

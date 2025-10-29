@@ -14,9 +14,9 @@ import { SimulationState, SimulationParameters, Pixel } from '../types/simulatio
 import { generatePoissonTimes, calculateQE, randomVisibleWavelength, addShotNoise, addReadNoise, addDarkCurrent, addFixedPatternNoise, addThermalNoise } from '../lib/utils'
 
 const DEFAULT_PARAMS: SimulationParameters = {
-  lightIntensity: 1000, // photons per second
-  quantumEfficiency: 0.8,
-  exposureTime: 2.0,
+  lightIntensity: 5000, // photons per second - much higher for visibility
+  quantumEfficiency: 0.9, // higher QE for more absorption
+  exposureTime: 3.0, // longer exposure
   pixelSize: 20,
   gridSize: 10,
   fullWellCapacity: 50000,
@@ -51,6 +51,10 @@ export default function PhotonToDigitalConverter() {
   const [parameters, setParameters] = useState<SimulationParameters>(DEFAULT_PARAMS)
   const animationRef = useRef<number>()
   const lastTimeRef = useRef<number>(0)
+  const simulationStartTimeRef = useRef<number>(0)
+  const TRAVEL_TIME = 0.6 // seconds for a photon to reach the sensor visually
+  const READOUT_DURATION = 2.0 // seconds to finish readout
+  const readoutProgressRef = useRef<number>(0)
 
   // Initialize pixel grid
   function initializePixels(gridSize: number): Pixel[][] {
@@ -83,7 +87,6 @@ export default function PhotonToDigitalConverter() {
     
     frameTimes.forEach((time, index) => {
       const wavelength = randomVisibleWavelength()
-      const qe = calculateQE(wavelength, parameters.quantumEfficiency)
       
       // Random position across the sensor width
       const x = Math.random() * (parameters.gridSize * parameters.pixelSize)
@@ -99,7 +102,8 @@ export default function PhotonToDigitalConverter() {
         wavelength,
         energy: (6.626e-34 * 3e8) / (wavelength * 1e-9),
         arrivalTime: currentTime + time,
-        absorbed: Math.random() < qe,
+        spawnTime: performance.now() / 1000 - TRAVEL_TIME, // Use current time for visual animation
+        absorbed: false, // Will be determined when it hits the sensor
         targetPixel
       })
     })
@@ -108,47 +112,38 @@ export default function PhotonToDigitalConverter() {
   }, [parameters, simulationState.phase])
 
   // Update pixel states when photons are absorbed
-  const updatePixels = useCallback((photons: any[], deltaTime: number) => {
+  const updatePixels = useCallback((arrivingPhotons: any[], deltaTime: number) => {
     setSimulationState(prev => {
       const newPixels = prev.pixels.map(row => row.map(pixel => ({ ...pixel })))
       let absorbedCount = 0
       let totalElectrons = 0
 
-      // Process photon absorption
-      photons.forEach(photon => {
-        if (photon.absorbed) {
+      // Process photon absorption - determine if each arriving photon is absorbed
+      arrivingPhotons.forEach(photon => {
+        const wavelength = photon.wavelength
+        const qe = calculateQE(wavelength, parameters.quantumEfficiency)
+        const isAbsorbed = Math.random() < qe
+        
+        if (isAbsorbed) {
           const pixel = newPixels[photon.targetPixel.row][photon.targetPixel.col]
           pixel.electronCount += 1
           pixel.lastUpdate = photon.arrivalTime
           pixel.saturated = pixel.electronCount >= parameters.fullWellCapacity
+          // mark impact visuals
+          pixel.lastHitTime = prev.currentTime
+          pixel.recentHits = (pixel.recentHits ?? 0) + 1
+          pixel.showUntil = prev.currentTime + 0.6
           absorbedCount++
         }
       })
 
-      // Apply noise sources if enabled
-      if (parameters.enableNoise) {
-        newPixels.forEach((row, rowIndex) => {
-          row.forEach((pixel, colIndex) => {
-            if (pixel.electronCount > 0) {
-              // Apply shot noise
-              pixel.electronCount = addShotNoise(pixel.electronCount)
-              
-              // Apply fixed pattern noise
-              const pixelId = `${rowIndex}-${colIndex}`
-              pixel.electronCount = addFixedPatternNoise(pixel.electronCount, pixelId)
-              
-              // Apply thermal noise
-              pixel.electronCount = addThermalNoise(pixel.electronCount)
-              
-              // Apply dark current
-              if (parameters.enableDarkCurrent) {
-                pixel.electronCount = addDarkCurrent(pixel.electronCount, parameters.darkCurrentRate, deltaTime)
-              }
-              
-              // Ensure non-negative
-              pixel.electronCount = Math.max(0, pixel.electronCount)
-              pixel.saturated = pixel.electronCount >= parameters.fullWellCapacity
-            }
+      // Do NOT mutate accumulated charge with measurement noise.
+      // Only add dark current during integration.
+      if (parameters.enableDarkCurrent) {
+        newPixels.forEach((row) => {
+          row.forEach((pixel) => {
+            pixel.electronCount = addDarkCurrent(pixel.electronCount, parameters.darkCurrentRate, deltaTime)
+            pixel.saturated = pixel.electronCount >= parameters.fullWellCapacity
           })
         })
       }
@@ -157,13 +152,22 @@ export default function PhotonToDigitalConverter() {
       const allPixels = newPixels.flat()
       totalElectrons = allPixels.reduce((sum, pixel) => sum + pixel.electronCount, 0)
       
-      // Apply read noise for digital conversion
-      const digitalValues = allPixels.map(p => {
-        let electrons = p.electronCount
+      // Compute digital values as if converted now (for stats display only).
+      const digitalValues = allPixels.map((p, idx) => {
+        const electronsBase = p.electronCount
+        // Apply measurement noises (non-destructive) at conversion time
+        let measured = electronsBase
         if (parameters.enableNoise) {
-          electrons = addReadNoise(electrons, parameters.readNoise)
+          // shot noise at readout
+          measured = addShotNoise(measured)
+          // read noise
+          measured = addReadNoise(measured, parameters.readNoise)
+          // fixed pattern gain variation
+          measured = addFixedPatternNoise(measured, `px-${idx}`)
+          // thermal noise
+          measured = addThermalNoise(measured)
         }
-        return Math.min(Math.pow(2, parameters.bitDepth) - 1, Math.round(electrons * 0.1))
+        return Math.min(Math.pow(2, parameters.bitDepth) - 1, Math.round(Math.max(0, measured) * 0.1))
       })
       
       const meanDN = digitalValues.reduce((sum, val) => sum + val, 0) / digitalValues.length
@@ -175,7 +179,7 @@ export default function PhotonToDigitalConverter() {
         ...prev,
         pixels: newPixels,
         statistics: {
-          totalPhotons: prev.statistics.totalPhotons + photons.length,
+          totalPhotons: prev.statistics.totalPhotons + arrivingPhotons.length,
           absorbedPhotons: prev.statistics.absorbedPhotons + absorbedCount,
           totalElectrons,
           meanDN,
@@ -199,6 +203,7 @@ export default function PhotonToDigitalConverter() {
       
       // Check if exposure time is complete
       if (newTime >= prev.exposureTime && prev.phase === 'integration') {
+        readoutProgressRef.current = 0
         return {
           ...prev,
           currentTime: newTime,
@@ -209,13 +214,61 @@ export default function PhotonToDigitalConverter() {
       // Generate new photons during integration phase
       if (prev.phase === 'integration') {
         const newPhotons = generatePhotons(newTime, deltaTime)
-        updatePixels(newPhotons, deltaTime)
+        const allPhotons = [...prev.photons, ...newPhotons]
+        
+        // Find photons that have arrived at the sensor
+        const arrivingNow = allPhotons.filter(p => p.arrivalTime <= newTime)
+        const stillFlying = allPhotons.filter(p => p.arrivalTime > newTime)
+        
+        // Process absorption for arriving photons
+        if (arrivingNow.length > 0) {
+          updatePixels(arrivingNow, deltaTime)
+        }
+        
+        // Also process some photons immediately for visual feedback
+        const immediatePhotons = newPhotons.slice(0, Math.min(5, newPhotons.length))
+        if (immediatePhotons.length > 0) {
+          updatePixels(immediatePhotons, deltaTime)
+        }
         
         return {
           ...prev,
           currentTime: newTime,
-          photons: [...prev.photons, ...newPhotons].slice(-1000) // Keep last 1000 photons for performance
+          photons: stillFlying.slice(-1000) // Keep last 1000 photons for performance
         }
+      }
+
+      // Readout phase progression
+      if (prev.phase === 'readout') {
+        readoutProgressRef.current += deltaTime / READOUT_DURATION
+        const done = readoutProgressRef.current >= 1
+        if (done) {
+          // Finalize DN conversion once at end of readout
+          const finalizedPixels = prev.pixels.map(row => row.map(pixel => {
+            const electrons = Math.max(0, pixel.electronCount)
+            const maxDN = Math.pow(2, parameters.bitDepth) - 1
+            const dn = Math.min(maxDN, Math.round(electrons * 0.1))
+            return { ...pixel, digitalValue: dn }
+          }))
+
+          return {
+            ...prev,
+            currentTime: newTime,
+            phase: 'complete',
+            pixels: finalizedPixels,
+            photons: []
+          }
+        }
+
+        return {
+          ...prev,
+          currentTime: newTime
+        }
+      }
+
+      // Complete phase - freeze time
+      if (prev.phase === 'complete') {
+        return prev
       }
 
       return {
@@ -230,6 +283,9 @@ export default function PhotonToDigitalConverter() {
   // Start animation loop
   useEffect(() => {
     if (simulationState.isRunning && !simulationState.isPaused) {
+      if (simulationState.currentTime === 0) {
+        simulationStartTimeRef.current = performance.now() / 1000
+      }
       lastTimeRef.current = performance.now()
       animationRef.current = requestAnimationFrame(animate)
     } else {
@@ -454,6 +510,7 @@ export default function PhotonToDigitalConverter() {
                     pixels={simulationState.pixels}
                     parameters={parameters}
                     phase={simulationState.phase}
+                    currentTime={simulationState.currentTime}
                   />
                 </div>
               </CardContent>
