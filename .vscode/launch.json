@@ -1,0 +1,53 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        
+      {
+        "type": "node-terminal",
+        "request": "launch",
+        "name": "Dev: BitDepthVisualizer",
+        "cwd": "${workspaceFolder}/BitDepthVisualizer",
+        "command": "bun run dev",
+        "serverReadyAction": {
+          "pattern": "Local:.*(https?://.*)",
+          "uriFormat": "%s",
+          "action": "openExternally"
+        }
+      },
+      {
+        "type": "node-terminal",
+        "request": "launch",
+        "name": "Dev: ImageLab",
+        "cwd": "${workspaceFolder}/ImageLab",
+        "command": "bun run dev",
+        "serverReadyAction": {
+          "pattern": "Local:.*(https?://.*)",
+          "uriFormat": "%s",
+          "action": "openExternally"
+        }
+      },
+      {
+        "type": "node-terminal",
+        "request": "launch",
+        "name": "Dev: PhotonSimulation",
+        "cwd": "${workspaceFolder}/PhotonSimulation",
+        "command": "bun run dev",
+        "serverReadyAction": {
+          "pattern": "Local:.*(https?://.*)",
+          "uriFormat": "%s",
+          "action": "openExternally"
+        }
+      }
+    ],
+    "compounds": [
+      {
+        "name": "Dev: All Projects",
+        "configurations": [
+          "Dev: BitDepthVisualizer",
+          "Dev: ImageLab",
+          "Dev: PhotonSimulation"
+        ]
+      }
+    ]
+  }
+  
