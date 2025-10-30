@@ -178,3 +178,4 @@ export default function ReadoutChain({ pixels, parameters, phase }: ReadoutChain
     </Card>
   )
 }
+
