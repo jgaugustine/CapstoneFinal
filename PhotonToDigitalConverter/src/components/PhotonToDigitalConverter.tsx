@@ -368,6 +368,7 @@ export default function PhotonToDigitalConverter() {
                   max={10000}
                   step={100}
                   className="w-full"
+                  onDoubleClick={() => updateParameter('lightIntensity', DEFAULT_PARAMS.lightIntensity)}
                 />
                 <div className="text-xs text-muted-foreground">
                   {parameters.lightIntensity} photons/sec
@@ -384,6 +385,7 @@ export default function PhotonToDigitalConverter() {
                   max={1.0}
                   step={0.05}
                   className="w-full"
+                  onDoubleClick={() => updateParameter('quantumEfficiency', DEFAULT_PARAMS.quantumEfficiency)}
                 />
                 <div className="text-xs text-muted-foreground">
                   {(parameters.quantumEfficiency * 100).toFixed(0)}%
@@ -400,6 +402,7 @@ export default function PhotonToDigitalConverter() {
                   max={10.0}
                   step={0.1}
                   className="w-full"
+                  onDoubleClick={() => updateParameter('exposureTime', DEFAULT_PARAMS.exposureTime)}
                 />
                 <div className="text-xs text-muted-foreground">
                   {parameters.exposureTime.toFixed(1)}s
@@ -416,6 +419,7 @@ export default function PhotonToDigitalConverter() {
                   max={16}
                   step={1}
                   className="w-full"
+                  onDoubleClick={() => updateParameter('bitDepth', DEFAULT_PARAMS.bitDepth)}
                 />
                 <div className="text-xs text-muted-foreground">
                   {parameters.bitDepth}-bit
