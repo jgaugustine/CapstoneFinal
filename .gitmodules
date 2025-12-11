@@ -8,3 +8,6 @@
 	path = ImageLab
 	url = https://github.com/jgaugustine/cp-imagelab.git
 	branch = main
+[submodule "DemosaicLab"]
+	path = DemosaicLab
+	url = https://github.com/jgaugustine/cp-DemosaicLab.git
