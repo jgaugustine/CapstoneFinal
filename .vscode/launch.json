@@ -1,6 +1,7 @@
 {
     "version": "0.2.0",
     "configurations": [
+    
 
         
       {
@@ -42,8 +43,8 @@
       {
         "type": "node-terminal",
         "request": "launch",
-        "name": "Dev: PhotonToDigitalConverter",
-        "cwd": "${workspaceFolder}/BitDepthVisualizer",
+        "name": "Dev: DemosaicLab",
+        "cwd": "${workspaceFolder}/DemosaicLab",
         "command": "bun run dev",
         "serverReadyAction": {
           "pattern": "Local:.*(https?://.*)",
@@ -54,15 +55,15 @@
       {
         "type": "node-terminal",
         "request": "launch",
-        "name": "Dev: DemosaicLab",
-        "cwd": "${workspaceFolder}/DemosaicLab",
-        "command": "bun run dev",
+        "name": "Dev: ExposureLAB",
+        "cwd": "${workspaceFolder}/ExposureLAB",
+        "command": "npm run dev",
         "serverReadyAction": {
           "pattern": "Local:.*(https?://.*)",
           "uriFormat": "%s",
           "action": "openExternally"
         }
-      },
+      }
     ],
 
     "compounds": [

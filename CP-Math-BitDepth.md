@@ -76,9 +76,7 @@ c^* = \arg\max_{c_i} \|c_i - \bar{\mathbf{p}}\|_2^2.
 \]
 The overlay blends as \(\mathbf{p}_{\text{out}} = (1-\alpha)\mathbf{p}_{\text{in}} + \alpha c^*\) with \(\alpha = 0.6\).
 
-## 7. Interaction Rules
-
-- If the uploaded bit depth is \(b_{\text{orig}}\), the slider upper bound is \(\min(16, b_{\text{orig}})\). When the user selects \(b \ge b_{\text{orig}}\), quantization and edge overlay are skipped and the processed canvas matches the original.
+## 7. Interaction Rules- If the uploaded bit depth is \(b_{\text{orig}}\), the slider upper bound is \(\min(16, b_{\text{orig}})\). When the user selects \(b \ge b_{\text{orig}}\), quantization and edge overlay are skipped and the processed canvas matches the original.
 - The edge overlay is gated by a checkbox; when off, only the quantized image renders.
 - Bucket boundaries rely on per-pixel bucket indices; edges require both a bucket change and Sobel lift above threshold to avoid false positives from original texture.
 
@@ -87,4 +85,3 @@ The overlay blends as \(\mathbf{p}_{\text{out}} = (1-\alpha)\mathbf{p}_{\text{in
 - Near-zero luminance can cause division artifacts in the scaling step; we clamp the denominator with a small \(\epsilon\).
 - If maxDiff is zero (uniform images), the edge mask stays empty and no overlay draws.
 - Very low bit depths (e.g., \(b = 1\)) can saturate the histogram; the overlay still aligns to bucket transitions because the mask keys on bucket changes, not histogram shape.
-
