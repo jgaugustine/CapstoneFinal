@@ -34,6 +34,8 @@ export type LinearMaskConfig = {
 export type SceneState = {
   image: ImageRGBAFloat;
   illumination: number; // scalar multiplier
+  /** Capture settings from EXIF; used as EV 0 reference when present */
+  exposureMetadata?: ExposureMetadata;
   subjectMask?: Mask;
   depthMode?: 'none' | 'subject' | 'click';
   radialMasks?: RadialMaskConfig[];
@@ -44,6 +46,15 @@ export type CameraSettings = {
   shutterSeconds: number;
   aperture: number; // f-number
   iso: number;
+}
+
+/** Exposure metadata from image EXIF (used as EV reference when available) */
+export type ExposureMetadata = {
+  shutterSeconds: number;
+  aperture: number;
+  iso: number;
+  /** Exposure compensation in EV stops (e.g. 0.5 for +0.5 EV), from EXIF */
+  exposureCompensation?: number;
 }
 
 export type Constraints = {
@@ -63,6 +74,22 @@ export type AEPriorities = {
   midtoneTarget: number; // m
 }
 
+export type AERelaxationStep = {
+  stepIndex: number;
+  /** Maximum allowed highlight clipping at this step (0-1) */
+  maxHighlightClip?: number;
+  /** Maximum allowed shadow clipping at this step (0-1) */
+  maxShadowClip?: number;
+  /** EV values that are feasible at this step, after applying the current constraint */
+  feasibleEVs: number[];
+};
+
+export type AECandidateStage =
+  | 'initial'
+  | 'stage1_feasible'
+  | 'stage2_feasible'
+  | 'chosen';
+
 export type AETrace = {
   candidates: Array<{
     ev: number;
@@ -70,12 +97,20 @@ export type AETrace = {
     shadowClip: number;
     median: number;
     midtoneError: number;
+    /** Highest stage this candidate reached in the lexicographic search */
+    stage: AECandidateStage;
   }>;
   stage1Feasible: number[]; // EV values
   stage2Feasible: number[];
   relaxCountHighlight: number;
   relaxCountShadow: number;
   chosenEV: number;
+  /** Detailed history of highlight-constraint relaxation */
+  relaxationStepsHighlight: AERelaxationStep[];
+  /** Detailed history of shadow-constraint relaxation (applied on top of highlight-feasible set) */
+  relaxationStepsShadow: AERelaxationStep[];
+  /** Human-readable explanation of why this EV was chosen */
+  chosenReason: string;
 }
 
 export type Telemetry = {
@@ -112,4 +147,11 @@ export type AllocationLog = {
   constraintHits: string[];
   quantizationApplied: boolean;
   preference: 'shutter' | 'aperture' | 'iso' | 'balanced';
+  /** Decomposition of quantized EV into component contributions */
+  evBreakdown?: {
+    shutterEV: number;
+    apertureEV: number;
+    isoEV: number;
+    totalEV: number;
+  };
 }

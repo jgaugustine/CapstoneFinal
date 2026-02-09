@@ -146,11 +146,19 @@ export function simulateForward(
     processed[i + 3] = image.data[i + 3];
   }
   
-  // Step 2: Apply exposure scaling
-  // EV = log2((shutterSeconds * aperture²) * (ISO/100))
-  // ISO acts as a gain multiplier: higher ISO = brighter image
-  const ev = Math.log2((settings.shutterSeconds * settings.aperture * settings.aperture) * (settings.iso / 100));
-  const exposureScale = Math.pow(2, ev);
+  // Step 2: Apply exposure scaling (relative to capture settings)
+  // When settings match scene.exposureMetadata, output = input (scale = 1)
+  // Light ∝ (shutter × ISO) / aperture² — smaller aperture = less light
+  const evCurrent = Math.log2(
+    (settings.shutterSeconds * (settings.iso / 100)) / (settings.aperture * settings.aperture)
+  );
+  const meta = scene.exposureMetadata;
+  const evRef = meta
+    ? Math.log2(
+        (meta.shutterSeconds * (meta.iso / 100)) / (meta.aperture * meta.aperture)
+      )
+    : Math.log2((2.8 * 2.8) / ((1 / 60) * 1)); // fallback: f/2.8, 1/60, ISO 100
+  const exposureScale = Math.pow(2, evCurrent - evRef);
   
   for (let i = 0; i < processed.length; i += 4) {
     processed[i] *= exposureScale;

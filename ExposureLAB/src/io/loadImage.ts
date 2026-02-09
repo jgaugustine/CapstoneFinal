@@ -1,4 +1,5 @@
-import { ImageRGBAFloat } from '@/types';
+import exifr from 'exifr';
+import { ImageRGBAFloat, ExposureMetadata } from '@/types';
 
 // Pre-computed lookup table for sRGB to linear conversion (256 entries)
 // This is much faster than calling Math.pow() for every pixel
@@ -22,7 +23,40 @@ export const linearToSrgb = (linear0to1: number): number => {
 // Maximum dimension for longest side (2048px for good performance with 100MP+ images)
 const MAX_DIMENSION = 2048;
 
-export async function loadImage(file: File): Promise<ImageRGBAFloat> {
+export type LoadImageResult = {
+  image: ImageRGBAFloat;
+  exposureMetadata?: ExposureMetadata;
+};
+
+/** Extract exposure metadata from EXIF if present and valid */
+async function extractExposureMetadata(file: File): Promise<ExposureMetadata | undefined> {
+  try {
+    const exif = await exifr.parse(file, {
+      pick: ['ExposureTime', 'FNumber', 'ISO', 'ExposureCompensation'],
+    });
+    if (!exif) return undefined;
+    const exposureTime = exif.ExposureTime; // seconds (e.g. 0.004 for 1/250)
+    const fNumber = exif.FNumber;
+    const iso = exif.ISO ?? exif.ISOSpeed;
+    if (
+      typeof exposureTime !== 'number' ||
+      typeof fNumber !== 'number' ||
+      typeof iso !== 'number' ||
+      exposureTime <= 0 ||
+      fNumber <= 0 ||
+      iso <= 0
+    ) {
+      return undefined;
+    }
+    const exposureCompensation =
+      typeof exif.ExposureCompensation === 'number' ? exif.ExposureCompensation : undefined;
+    return { shutterSeconds: exposureTime, aperture: fNumber, iso, exposureCompensation };
+  } catch {
+    return undefined;
+  }
+}
+
+export async function loadImage(file: File): Promise<LoadImageResult> {
   try {
     // Use createImageBitmap for efficient decoding and resizing
     const bitmap = await createImageBitmap(file);
@@ -73,7 +107,7 @@ export async function loadImage(file: File): Promise<ImageRGBAFloat> {
     const totalPixels = targetWidth * targetHeight;
     
     return new Promise((resolve) => {
-      const processChunk = (startIdx: number) => {
+      const processChunk = async (startIdx: number) => {
         const endIdx = Math.min(startIdx + chunkSize * 4, data.length);
         
         for (let i = startIdx; i < endIdx; i += 4) {
@@ -86,13 +120,16 @@ export async function loadImage(file: File): Promise<ImageRGBAFloat> {
         processed += (endIdx - startIdx) / 4;
         
         if (endIdx < data.length) {
-          // Yield to browser to keep UI responsive
           setTimeout(() => processChunk(endIdx), 0);
         } else {
+          const exposureMetadata = await extractExposureMetadata(file);
           resolve({
-            data: linearData,
-            width: targetWidth,
-            height: targetHeight,
+            image: {
+              data: linearData,
+              width: targetWidth,
+              height: targetHeight,
+            },
+            exposureMetadata,
           });
         }
       };
@@ -145,10 +182,15 @@ export async function loadImage(file: File): Promise<ImageRGBAFloat> {
             linearData[i + 3] = imageData.data[i + 3] / 255;
           }
           
-          resolve({
-            data: linearData,
-            width: targetWidth,
-            height: targetHeight,
+          extractExposureMetadata(file).then((exposureMetadata) => {
+            resolve({
+              image: {
+                data: linearData,
+                width: targetWidth,
+                height: targetHeight,
+              },
+              exposureMetadata,
+            });
           });
         };
         

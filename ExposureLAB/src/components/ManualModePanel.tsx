@@ -1,34 +1,44 @@
-import { CameraSettings } from '@/types';
+import { useState } from 'react';
+import { CameraSettings, ExposureMetadata } from '@/types';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Slider } from '@/components/ui/slider';
 import { Label } from '@/components/ui/label';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { APERTURE_STOPS, ISO_STOPS, SHUTTER_SPEEDS, snapToNearest } from '@/utils/cameraSettings';
+
+// Fallback reference when no EXIF metadata (f/2.8, 1/60s, ISO 100)
+const DEFAULT_REF = { aperture: 2.8, shutterSeconds: 1 / 60, iso: 100 };
+function evOffsetFromRef(ref: { aperture: number; shutterSeconds: number; iso: number }): number {
+  return Math.log2((ref.aperture * ref.aperture) / (ref.shutterSeconds * (ref.iso / 100)));
+}
 
 interface ManualModePanelProps {
   settings: CameraSettings;
   onSettingsChange: (settings: CameraSettings) => void;
+  /** From image EXIF; EV 0 = as-captured when present */
+  exposureMetadata?: ExposureMetadata | null;
 }
 
-export function ManualModePanel({ settings, onSettingsChange }: ManualModePanelProps) {
+type CameraProgramMode = 'manual' | 'aperture_priority' | 'shutter_priority' | 'manual_auto_iso';
+
+export function ManualModePanel({ settings, onSettingsChange, exposureMetadata }: ManualModePanelProps) {
+  const [programMode, setProgramMode] = useState<CameraProgramMode>('manual');
+
+  const evOffset = exposureMetadata
+    ? evOffsetFromRef(exposureMetadata)
+    : evOffsetFromRef(DEFAULT_REF);
+
+  // Reference EV used for priority/auto modes (match capture brightness when possible)
+  const ref = exposureMetadata ?? DEFAULT_REF;
+  const evRef = Math.log2(
+    (ref.shutterSeconds * (ref.iso / 100)) / (ref.aperture * ref.aperture)
+  );
+
   // Generate shutter speeds from 1/8000s to 30s with 1/3 stop increments
   // 1/3 stop = 2^(1/3) ≈ 1.26 multiplier
   const generateShutterSpeeds = (): number[] => {
-    const speeds: number[] = [];
-    const minShutter = 1/8000;
-    const maxShutter = 30;
-    const stopIncrement = 1/3; // 1/3 stop increments
-    
-    // Start from 1/8000 and go up to 30s
-    let current = minShutter;
-    while (current <= maxShutter) {
-      speeds.push(current);
-      // Next value: multiply by 2^(1/3) for 1/3 stop
-      current *= Math.pow(2, stopIncrement);
-    }
-    // Ensure we include exactly 30s
-    if (speeds[speeds.length - 1] < maxShutter) {
-      speeds.push(maxShutter);
-    }
-    return speeds;
+    // Reuse shared shutter speed table so sliders and auto modes align
+    return SHUTTER_SPEEDS;
   };
 
   const shutterSpeeds = generateShutterSpeeds();
@@ -53,8 +63,7 @@ export function ManualModePanel({ settings, onSettingsChange }: ManualModePanelP
   };
 
   // Aperture slider: f/2.8 to f/32 with full stops (doubling light each step)
-  // Full stops: f/2.8, f/4, f/5.6, f/8, f/11, f/16, f/22, f/32
-  const apertureStops = [2.8, 4.0, 5.6, 8.0, 11, 16, 22, 32];
+  const apertureStops = APERTURE_STOPS;
 
   const apertureToSlider = (aperture: number): number => {
     let closestIdx = 0;
@@ -79,7 +88,7 @@ export function ManualModePanel({ settings, onSettingsChange }: ManualModePanelP
 
   // ISO slider: 100 to 25600
   const isoToSlider = (iso: number): number => {
-    const stops = [100, 200, 400, 800, 1600, 3200, 6400, 12800, 25600];
+    const stops = ISO_STOPS;
     let closestIdx = 0;
     let minDiff = Math.abs(iso - stops[0]);
     for (let i = 1; i < stops.length; i++) {
@@ -93,7 +102,7 @@ export function ManualModePanel({ settings, onSettingsChange }: ManualModePanelP
   };
 
   const sliderToISO = (value: number): number => {
-    const stops = [100, 200, 400, 800, 1600, 3200, 6400, 12800, 25600];
+    const stops = ISO_STOPS;
     const idx = Math.round((value / 100) * (stops.length - 1));
     return stops[Math.max(0, Math.min(stops.length - 1, idx))];
   };
@@ -103,81 +112,162 @@ export function ManualModePanel({ settings, onSettingsChange }: ManualModePanelP
     return `1/${Math.round(1 / shutter)}s`;
   };
 
+  // Helpers for auto modes: solve for the missing parameter at the reference EV and quantize
+  const solveShutterForRefEV = (aperture: number, iso: number): number => {
+    const rawShutter = (Math.pow(2, evRef) * aperture * aperture) / (iso / 100);
+    return snapToNearest(rawShutter, SHUTTER_SPEEDS);
+  };
+
+  const solveApertureForRefEV = (shutterSeconds: number, iso: number): number => {
+    const rawAperture = Math.sqrt(
+      (shutterSeconds * (iso / 100)) / Math.pow(2, evRef)
+    );
+    return snapToNearest(rawAperture, APERTURE_STOPS);
+  };
+
+  const solveISOForRefEV = (shutterSeconds: number, aperture: number): number => {
+    const rawISO = 100 * (Math.pow(2, evRef) * (aperture * aperture)) / shutterSeconds;
+    // Clamp/quantize to ISO stops between 100 and 25600
+    return snapToNearest(rawISO, ISO_STOPS, 100, 25600);
+  };
+
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Manual Mode</CardTitle>
+        <CardTitle>Camera Mode</CardTitle>
         <CardDescription>
-          Adjust camera settings manually and see the forward-simulated results
+          Choose between full manual, aperture/shutter priority, or manual with auto ISO
         </CardDescription>
+        <div className="mt-4">
+          <Tabs
+            value={programMode}
+            onValueChange={(value) => setProgramMode(value as CameraProgramMode)}
+          >
+            <TabsList className="grid grid-cols-4 w-full">
+              <TabsTrigger value="manual">M</TabsTrigger>
+              <TabsTrigger value="aperture_priority">Av</TabsTrigger>
+              <TabsTrigger value="shutter_priority">Tv</TabsTrigger>
+              <TabsTrigger value="manual_auto_iso">M + Auto ISO</TabsTrigger>
+            </TabsList>
+          </Tabs>
+        </div>
       </CardHeader>
       <CardContent className="space-y-6">
-        <div className="space-y-2">
-          <div className="flex items-center justify-between">
-            <Label htmlFor="shutter">Shutter Speed</Label>
-            <span className="text-sm font-mono">{formatShutter(settings.shutterSeconds)}</span>
-          </div>
-          <Slider
-            id="shutter"
-            value={[shutterToSlider(settings.shutterSeconds)]}
-            onValueChange={([value]) => {
-              onSettingsChange({
-                ...settings,
-                shutterSeconds: sliderToShutter(value),
-              });
-            }}
-            min={0}
-            max={100}
-            step={1}
-          />
-        </div>
+        {(programMode === 'manual' ||
+          programMode === 'shutter_priority' ||
+          programMode === 'manual_auto_iso') && (
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <Label htmlFor="shutter">Shutter Speed</Label>
+              <span className="text-sm font-mono">
+                {formatShutter(settings.shutterSeconds)}
+              </span>
+            </div>
+            <Slider
+              id="shutter"
+              value={[shutterToSlider(settings.shutterSeconds)]}
+              onValueChange={([value]) => {
+                const newShutter = sliderToShutter(value);
+                let next = { ...settings, shutterSeconds: newShutter };
 
-        <div className="space-y-2">
-          <div className="flex items-center justify-between">
-            <Label htmlFor="aperture">Aperture (f-number)</Label>
-            <span className="text-sm font-mono">f/{settings.aperture.toFixed(1)}</span>
-          </div>
-          <Slider
-            id="aperture"
-            value={[apertureToSlider(settings.aperture)]}
-            onValueChange={([value]) => {
-              onSettingsChange({
-                ...settings,
-                aperture: sliderToAperture(value),
-              });
-            }}
-            min={0}
-            max={100}
-            step={1}
-          />
-        </div>
+                if (programMode === 'manual_auto_iso') {
+                  // M + Auto ISO: user controls shutter/aperture, ISO is computed
+                  next.iso = solveISOForRefEV(next.shutterSeconds, next.aperture);
+                } else if (programMode === 'shutter_priority') {
+                  // Tv: user controls shutter/ISO, aperture is computed
+                  next.aperture = solveApertureForRefEV(next.shutterSeconds, next.iso);
+                }
 
-        <div className="space-y-2">
-          <div className="flex items-center justify-between">
-            <Label htmlFor="iso">ISO</Label>
-            <span className="text-sm font-mono">{settings.iso}</span>
+                onSettingsChange(next);
+              }}
+              min={0}
+              max={100}
+              step={1}
+            />
           </div>
-          <Slider
-            id="iso"
-            value={[isoToSlider(settings.iso)]}
-            onValueChange={([value]) => {
-              onSettingsChange({
-                ...settings,
-                iso: sliderToISO(value),
-              });
-            }}
-            min={0}
-            max={100}
-            step={1}
-          />
-        </div>
+        )}
+
+        {(programMode === 'manual' ||
+          programMode === 'aperture_priority' ||
+          programMode === 'manual_auto_iso') && (
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <Label htmlFor="aperture">Aperture (f-number)</Label>
+              <span className="text-sm font-mono">
+                f/{settings.aperture.toFixed(1)}
+              </span>
+            </div>
+            <Slider
+              id="aperture"
+              value={[apertureToSlider(settings.aperture)]}
+              onValueChange={([value]) => {
+                const newAperture = sliderToAperture(value);
+                let next = { ...settings, aperture: newAperture };
+
+                if (programMode === 'aperture_priority') {
+                  // Av: user controls aperture/ISO, shutter is computed
+                  next.shutterSeconds = solveShutterForRefEV(
+                    next.aperture,
+                    next.iso
+                  );
+                } else if (programMode === 'manual_auto_iso') {
+                  // M + Auto ISO: user controls shutter/aperture, ISO is computed
+                  next.iso = solveISOForRefEV(next.shutterSeconds, next.aperture);
+                }
+
+                onSettingsChange(next);
+              }}
+              min={0}
+              max={100}
+              step={1}
+            />
+          </div>
+        )}
+
+        {(programMode === 'manual' ||
+          programMode === 'aperture_priority' ||
+          programMode === 'shutter_priority') && (
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <Label htmlFor="iso">ISO</Label>
+              <span className="text-sm font-mono">{settings.iso}</span>
+            </div>
+            <Slider
+              id="iso"
+              value={[isoToSlider(settings.iso)]}
+              onValueChange={([value]) => {
+                const newISO = sliderToISO(value);
+                let next = { ...settings, iso: newISO };
+
+                if (programMode === 'aperture_priority') {
+                  // Av: user controls aperture/ISO, shutter is computed
+                  next.shutterSeconds = solveShutterForRefEV(
+                    next.aperture,
+                    next.iso
+                  );
+                } else if (programMode === 'shutter_priority') {
+                  // Tv: user controls shutter/ISO, aperture is computed
+                  next.aperture = solveApertureForRefEV(
+                    next.shutterSeconds,
+                    next.iso
+                  );
+                }
+
+                onSettingsChange(next);
+              }}
+              min={0}
+              max={100}
+              step={1}
+            />
+          </div>
+        )}
 
         <div className="pt-4 border-t border-border">
           <div className="text-sm space-y-1">
             <div className="flex justify-between">
               <span className="text-muted-foreground">Exposure Value (EV):</span>
               <span className="font-mono">
-                {Math.log2((settings.aperture * settings.aperture * (settings.iso / 100)) / settings.shutterSeconds).toFixed(2)}
+                {(Math.log2((settings.shutterSeconds * (settings.iso / 100)) / (settings.aperture * settings.aperture)) + evOffset).toFixed(2)}
               </span>
             </div>
           </div>

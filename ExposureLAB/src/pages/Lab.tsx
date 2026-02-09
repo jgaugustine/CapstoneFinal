@@ -22,6 +22,7 @@ import {
 } from '@/metering/weights';
 import { computeWeightedLuminance, computeTelemetry } from '@/metering/stats';
 import { applyMasksToScene } from '@/utils/masks';
+import { snapMetadataToSliderValues } from '@/utils/cameraSettings';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -103,14 +104,21 @@ export default function Lab() {
     if (!file) return;
 
     try {
-      const image = await loadImage(file);
+      const { image, exposureMetadata } = await loadImage(file);
       setScene({
         image,
         illumination: 1.0,
+        exposureMetadata,
       });
       setSimOutput(null);
       setAETrace(null);
       setAllocatedSettings(null);
+      // Set slider defaults from EXIF when available, else use fallback
+      setManualSettings(
+        exposureMetadata
+          ? snapMetadataToSliderValues(exposureMetadata, constraints)
+          : { shutterSeconds: 1 / 60, aperture: 2.8, iso: 100 }
+      );
     } catch (error) {
       console.error('Failed to load image:', error);
       alert('Failed to load image. Please try another file.');
@@ -170,8 +178,10 @@ export default function Lab() {
 
     const { settings } = allocateSettings(clampedEV, constraints, 'balanced');
     setAllocatedSettings(settings);
-    // Sim runs via effect when allocatedSettings updates
-  }, [scene, meteringWeights, aePriorities, constraints]);
+    // Run simulation immediately on click so it always updates (effect may not fire
+    // if allocatedSettings values are identical on consecutive runs)
+    runSimulationDeferred(settings);
+  }, [scene, meteringWeights, aePriorities, constraints, runSimulationDeferred]);
 
   // Compute telemetry from simulated output
   const telemetry = useMemo(() => {
@@ -240,6 +250,7 @@ export default function Lab() {
                 <ManualModePanel
                   settings={manualSettings}
                   onSettingsChange={setManualSettings}
+                  exposureMetadata={scene?.exposureMetadata}
                 />
               </TabsContent>
               <TabsContent value="ae" className="mt-0">
