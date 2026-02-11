@@ -99,6 +99,8 @@ export type AETrace = {
     midtoneError: number;
     /** Highest stage this candidate reached in the lexicographic search */
     stage: AECandidateStage;
+    /** True if this EV was computed past the sweep (for display only; not used in choice) */
+    extended?: boolean;
   }>;
   stage1Feasible: number[]; // EV values
   stage2Feasible: number[];

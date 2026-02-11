@@ -1,10 +1,10 @@
 import { useState, useCallback, useMemo, useEffect, useRef } from 'react';
-import { 
-  SceneState, 
-  CameraSettings, 
-  MeteringMode, 
-  AEPriorities, 
-  SimParams, 
+import {
+  SceneState,
+  CameraSettings,
+  MeteringMode,
+  AEPriorities,
+  SimParams,
   SimOutput,
   AETrace,
   Constraints,
@@ -14,18 +14,18 @@ import { loadImage } from '@/io/loadImage';
 import { simulateForward } from '@/sim/simulateForward';
 import { runLexiAE } from '@/ae/runLexiAE';
 import { allocateSettings, evRangeFromConstraints } from '@/allocation/allocateSettings';
-import { 
-  computeMatrixWeights, 
-  computeCenterWeights, 
-  computeSpotWeights, 
-  computeSubjectWeights 
+import {
+  computeMatrixWeights,
+  computeCenterWeights,
+  computeSpotWeights,
+  computeSubjectWeights,
 } from '@/metering/weights';
 import { computeWeightedLuminance, computeTelemetry } from '@/metering/stats';
 import { applyMasksToScene } from '@/utils/masks';
 import { snapMetadataToSliderValues } from '@/utils/cameraSettings';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Tabs, TabsContent } from '@/components/ui/tabs';
 import { ImageCanvas } from '@/components/ImageCanvas';
 import { ManualModePanel } from '@/components/ManualModePanel';
 import { AEModePanel } from '@/components/AEModePanel';
@@ -176,7 +176,11 @@ export default function Lab() {
     const clampedEV = Math.max(evRange.min, Math.min(evRange.max, chosenEV));
     setAETrace({ ...trace, chosenEV: clampedEV });
 
+    // Interpret chosen EV in the same EV space as allocateSettings / constraints.
     const { settings } = allocateSettings(clampedEV, constraints, 'balanced');
+    // Reflect AE result in the manual sliders so the UI shows
+    // the exposure that feeds the forward simulation.
+    setManualSettings(settings);
     setAllocatedSettings(settings);
     // Run simulation immediately on click so it always updates (effect may not fire
     // if allocatedSettings values are identical on consecutive runs)
@@ -240,32 +244,27 @@ export default function Lab() {
       <div className="max-w-[1600px] mx-auto space-y-6">
         <Tabs value={mode} onValueChange={(value) => setMode(value as 'manual' | 'ae')}>
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 mt-6">
-            {/* Left: Camera settings (MF / AE) */}
+            {/* Left: Telemetry + Camera settings */}
             <div className="lg:col-span-3 space-y-6">
-              <TabsList>
-                <TabsTrigger value="manual">MF</TabsTrigger>
-                <TabsTrigger value="ae">AE</TabsTrigger>
-              </TabsList>
-              <TabsContent value="manual" className="mt-0">
-                <ManualModePanel
-                  settings={manualSettings}
-                  onSettingsChange={setManualSettings}
-                  exposureMetadata={scene?.exposureMetadata}
-                />
-              </TabsContent>
-              <TabsContent value="ae" className="mt-0">
-                <AEModePanel
-                  priorities={aePriorities}
-                  onPrioritiesChange={setAEPriorities}
-                  onRunAE={handleRunAE}
-                  trace={aeTrace}
-                  allocatedSettings={allocatedSettings}
-                />
-              </TabsContent>
+              <TelemetryPanel telemetry={telemetry} luminance={luminance} />
+
+              <ManualModePanel
+                settings={mode === 'ae' && allocatedSettings ? allocatedSettings : manualSettings}
+                onSettingsChange={setManualSettings}
+                exposureMetadata={scene?.exposureMetadata}
+                mode={mode}
+                onModeChange={(value) => setMode(value)}
+              />
             </div>
 
-            {/* Center: Simulated output (left photo panel) */}
+            {/* Center: Metering (top middle) + simulated output */}
             <div className="lg:col-span-4 space-y-6">
+              {/* Metering mode - affects telemetry */}
+              <MeteringPanel
+                meteringMode={meteringMode}
+                onMeteringModeChange={setMeteringMode}
+              />
+
               <Card>
                 <CardHeader>
                   <div className="flex items-center justify-between">
@@ -294,12 +293,9 @@ export default function Lab() {
                   />
                 </CardContent>
               </Card>
-
-              {/* Scene statistics & histograms */}
-              <TelemetryPanel telemetry={telemetry} luminance={luminance} />
             </div>
 
-            {/* Right: Scene + lighting + metering + stats below */}
+            {/* Right: Scene + lighting */}
             <div className="lg:col-span-5 space-y-6">
               <ScenePanel
                 scene={scene}
@@ -309,14 +305,19 @@ export default function Lab() {
                 onSceneChange={handleSceneChange}
                 canvasDisplayWidth={canvasDisplayWidth}
               />
-
-              {/* Metering mode - affects telemetry */}
-              <MeteringPanel
-                meteringMode={meteringMode}
-                onMeteringModeChange={setMeteringMode}
-              />
             </div>
           </div>
+
+          {/* AE details span full width at the bottom in AE mode */}
+          <TabsContent value="ae" className="mt-6">
+            <AEModePanel
+              priorities={aePriorities}
+              onPrioritiesChange={setAEPriorities}
+              onRunAE={handleRunAE}
+              trace={aeTrace}
+              allocatedSettings={allocatedSettings}
+            />
+          </TabsContent>
         </Tabs>
       </div>
     </div>

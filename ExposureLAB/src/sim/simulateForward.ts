@@ -157,7 +157,10 @@ export function simulateForward(
     ? Math.log2(
         (meta.shutterSeconds * (meta.iso / 100)) / (meta.aperture * meta.aperture)
       )
-    : Math.log2((2.8 * 2.8) / ((1 / 60) * 1)); // fallback: f/2.8, 1/60, ISO 100
+    : Math.log2(
+        // Fallback reference when no EXIF: f/2.8, 1/60s, ISO 100
+        ((1 / 60) * (100 / 100)) / (2.8 * 2.8)
+      );
   const exposureScale = Math.pow(2, evCurrent - evRef);
   
   for (let i = 0; i < processed.length; i += 4) {
