@@ -118,14 +118,17 @@ export function runLexiAE(
     }
   });
   
-  // Stage 3: From Stage 2 feasible, choose E minimizing (median(E) - m)²
+  // Stage 3: From Stage 2 feasible, choose E minimizing (median(E) - m)².
+  // IMPORTANT: We do NOT add any extra EV penalty here so that the
+  // midtone target and clipping tolerances fully drive the chosen EV.
   let chosenEV = evRange.min;
   let minError = Infinity;
   let chosenReason = '';
   
   if (stage2Feasible.length > 0) {
     for (const candidate of candidates) {
-      if (stage2Feasible.includes(candidate.ev) && candidate.midtoneError < minError) {
+      if (!stage2Feasible.includes(candidate.ev)) continue;
+      if (candidate.midtoneError < minError) {
         minError = candidate.midtoneError;
         chosenEV = candidate.ev;
       }
@@ -134,7 +137,8 @@ export function runLexiAE(
   } else if (stage1Feasible.length > 0) {
     // Fallback: use stage 1 feasible if stage 2 is empty
     for (const candidate of candidates) {
-      if (stage1Feasible.includes(candidate.ev) && candidate.midtoneError < minError) {
+      if (!stage1Feasible.includes(candidate.ev)) continue;
+      if (candidate.midtoneError < minError) {
         minError = candidate.midtoneError;
         chosenEV = candidate.ev;
       }
@@ -156,7 +160,32 @@ export function runLexiAE(
   if (chosenCandidate) {
     chosenCandidate.stage = 'chosen';
   }
-  
+
+  // Extend sweep past max EV so the chart can show "what it would look like" (dotted)
+  const extensionEV = 2;
+  const extensionSteps = Math.ceil(extensionEV / evRange.step);
+  for (let i = 1; i <= extensionSteps; i++) {
+    const ev = evRange.max + i * evRange.step;
+    const scale = Math.pow(2, ev);
+    const scaledLuminance = new Float32Array(baseLuminance.length);
+    for (let j = 0; j < baseLuminance.length; j++) {
+      scaledLuminance[j] = baseLuminance[j] * scale;
+    }
+    const { highlightClip, shadowClip } = computeClipping(scaledLuminance, weights, priorities.epsilonShadow);
+    const { cdf, min, max } = computeWeightedHistogram(scaledLuminance, weights);
+    const median = computePercentiles(cdf, [0.5], min, max)[0];
+    const midtoneError = Math.pow(median - priorities.midtoneTarget, 2);
+    candidates.push({
+      ev,
+      highlightClip,
+      shadowClip,
+      median,
+      midtoneError,
+      stage: 'initial',
+      extended: true,
+    });
+  }
+
   const trace: AETrace = {
     candidates,
     stage1Feasible,

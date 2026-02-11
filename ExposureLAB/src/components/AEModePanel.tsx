@@ -13,7 +13,18 @@ type CandidateChartPoint = {
   shadowClip: number;
   median: number;
   midtoneError: number;
+  /** |median − target| for chart (same scale 0–1 as median) */
+  midtoneDistance: number;
   stage: AECandidateStage;
+  /** For chart: solid segment (ev <= chosenEV) */
+  highlightClipSolid?: number | null;
+  highlightClipDotted?: number | null;
+  shadowClipSolid?: number | null;
+  shadowClipDotted?: number | null;
+  medianSolid?: number | null;
+  medianDotted?: number | null;
+  midtoneDistanceSolid?: number | null;
+  midtoneDistanceDotted?: number | null;
 };
 
 interface AEModePanelProps {
@@ -38,6 +49,7 @@ export function AEModePanel({
         shadowClip: c.shadowClip * 100,
         median: c.median,
         midtoneError: c.midtoneError,
+        midtoneDistance: Math.abs(c.median - priorities.midtoneTarget),
         stage: c.stage,
       }))
     : null;
@@ -195,7 +207,27 @@ export function AEModePanel({
               )}
             </div>
 
-            {chartData && chartData.length > 0 && (
+            {chartData && chartData.length > 0 && (() => {
+              const evs = chartData.map((d) => d.ev);
+              const dataMin = Math.min(...evs);
+              const dataMax = Math.max(...evs);
+              const chosenEV = trace.chosenEV;
+              const padding = Math.max(0.5, (dataMax - dataMin) * 0.1);
+              const xMin = Math.min(dataMin, chosenEV) - padding;
+              const xMax = Math.max(dataMax, chosenEV) + padding;
+              const eps = 1e-6;
+              const chartDataSegments: CandidateChartPoint[] = chartData.map((p) => ({
+                ...p,
+                highlightClipSolid: p.ev <= chosenEV + eps ? p.highlightClip : null,
+                highlightClipDotted: p.ev >= chosenEV - eps ? p.highlightClip : null,
+                shadowClipSolid: p.ev <= chosenEV + eps ? p.shadowClip : null,
+                shadowClipDotted: p.ev >= chosenEV - eps ? p.shadowClip : null,
+                medianSolid: p.ev <= chosenEV + eps ? p.median : null,
+                medianDotted: p.ev >= chosenEV - eps ? p.median : null,
+                midtoneDistanceSolid: p.ev <= chosenEV + eps ? p.midtoneDistance : null,
+                midtoneDistanceDotted: p.ev >= chosenEV - eps ? p.midtoneDistance : null,
+              }));
+              return (
               <div className="pt-2">
                 <div className="flex items-center justify-between mb-2">
                   <p className="text-xs text-muted-foreground">EV vs Clipping</p>
@@ -219,70 +251,140 @@ export function AEModePanel({
                   </div>
                 </div>
                 <ResponsiveContainer width="100%" height={200}>
-                  <LineChart data={chartData}>
+                  <LineChart data={chartDataSegments}>
                     <XAxis 
                       dataKey="ev" 
                       type="number"
-                      domain={['dataMin', 'dataMax']}
+                      domain={[xMin, xMax]}
                       tickFormatter={(value) => value.toFixed(1)}
+                      label={{ value: 'EV', position: 'insideBottom', offset: -5 }}
                     />
+                    {/* yAxisId 0: clipping percentages (capped 0–100%), only axis visible on left */}
                     <YAxis 
+                      yAxisId={0}
+                      orientation="left"
+                      domain={[0, 100]}
+                      ticks={[0, 25, 50, 75, 100]}
+                      tickFormatter={(v) => String(Math.round(v))}
                       label={{ value: 'Clipping %', angle: -90, position: 'insideLeft' }}
                     />
+                    {/* yAxisId 1: median luminance (0-1), right axis, same color as median line */}
+                    <YAxis
+                      yAxisId={1}
+                      orientation="right"
+                      domain={[0, 1]}
+                      ticks={[0, 0.25, 0.5, 0.75, 1]}
+                      tickFormatter={(v) => v.toFixed(2)}
+                      stroke="hsl(var(--chart-4))"
+                      axisLine={{ stroke: 'hsl(var(--chart-4))' }}
+                      tick={{ fill: 'hsl(var(--chart-4))' }}
+                      tickLine={{ stroke: 'hsl(var(--chart-4))' }}
+                      label={{ value: 'Median luminance', angle: 90, position: 'insideRight', fill: 'hsl(var(--chart-4))' }}
+                    />
+                    {/* yAxisId 2: distance from midtone target (0–1), hidden; scale matches meaning */}
+                    <YAxis yAxisId={2} orientation="right" domain={[0, 1]} hide />
                     <Tooltip 
                       formatter={(value: number, name, props) => {
-                        if (name === 'median') {
-                          return [value.toFixed(3), 'Median luminance'];
+                        if (name === 'medianSolid' || name === 'medianDotted') {
+                          return [value != null ? value.toFixed(3) : '', 'Median luminance'];
                         }
-                        if (name === 'midtoneError') {
-                          return [value.toFixed(4), 'Midtone error'];
+                        if (name === 'midtoneDistanceSolid' || name === 'midtoneDistanceDotted') {
+                          return [value != null ? value.toFixed(3) : '', 'Distance from target'];
                         }
-                        return [`${value.toFixed(2)}%`, name];
+                        return [value != null ? `${value.toFixed(2)}%` : '', String(name).replace(/Solid|Dotted|\(extended\)/g, '').trim()];
                       }}
                       labelFormatter={(label) => `EV: ${Number(label).toFixed(2)}`}
                     />
                     <Legend />
                     <ReferenceLine 
-                      x={trace.chosenEV} 
+                      x={trace.chosenEV}
                       stroke="hsl(var(--primary))" 
                       strokeDasharray="3 3"
                       label="Chosen"
                     />
-                    <Line 
-                      type="monotone" 
-                      dataKey="highlightClip" 
-                      stroke="hsl(var(--destructive))" 
+                    {/* Solid: up to and including chosen EV */}
+                    <Line
+                      type="monotone"
+                      yAxisId={0}
+                      dataKey="highlightClipSolid"
+                      stroke="hsl(var(--destructive))"
                       name="Highlight Clip (blown highlights)"
                       dot={{ r: 2, strokeWidth: 0, fill: (d: any) => getStageColor(d.stage) }}
+                      connectNulls
                     />
-                    <Line 
-                      type="monotone" 
-                      dataKey="shadowClip" 
-                      stroke="hsl(var(--chart-3))" 
+                    <Line
+                      type="monotone"
+                      yAxisId={0}
+                      dataKey="shadowClipSolid"
+                      stroke="hsl(var(--chart-3))"
                       name="Shadow Clip (crushed shadows)"
                       dot={{ r: 2, strokeWidth: 0, fill: (d: any) => getStageColor(d.stage) }}
+                      connectNulls
                     />
-                    {/* Optional median and midtone error curves to show Stage 3 reasoning */}
+                    {/* Dotted: after chosen EV (not done in practice) */}
+                    <Line
+                      type="monotone"
+                      yAxisId={0}
+                      dataKey="highlightClipDotted"
+                      stroke="hsl(var(--destructive))"
+                      strokeDasharray="5 5"
+                      name="Highlight Clip (extended)"
+                      dot={false}
+                      connectNulls
+                    />
+                    <Line
+                      type="monotone"
+                      yAxisId={0}
+                      dataKey="shadowClipDotted"
+                      stroke="hsl(var(--chart-3))"
+                      strokeDasharray="5 5"
+                      name="Shadow Clip (extended)"
+                      dot={false}
+                      connectNulls
+                    />
                     <Line
                       type="monotone"
                       yAxisId={1}
-                      dataKey="median"
+                      dataKey="medianSolid"
                       stroke="hsl(var(--chart-4))"
                       name="Median luminance (0-1)"
                       dot={false}
+                      connectNulls
+                    />
+                    <Line
+                      type="monotone"
+                      yAxisId={1}
+                      dataKey="medianDotted"
+                      stroke="hsl(var(--chart-4))"
+                      strokeDasharray="5 5"
+                      name="Median (extended)"
+                      dot={false}
+                      connectNulls
                     />
                     <Line
                       type="monotone"
                       yAxisId={2}
-                      dataKey="midtoneError"
-                      stroke="hsl(var(--chart-5))"
-                      name="Midtone error (distance from target)"
+                      dataKey="midtoneDistanceSolid"
+                      stroke="hsl(220 75% 50%)"
+                      name="Distance from target"
                       dot={false}
+                      connectNulls
+                    />
+                    <Line
+                      type="monotone"
+                      yAxisId={2}
+                      dataKey="midtoneDistanceDotted"
+                      stroke="hsl(220 75% 50%)"
+                      strokeDasharray="5 5"
+                      name="Distance from target (extended)"
+                      dot={false}
+                      connectNulls
                     />
                   </LineChart>
                 </ResponsiveContainer>
               </div>
-            )}
+              );
+            })()}
 
             {/* Candidate comparison table */}
             {chartData && chartData.length > 0 && (
@@ -319,9 +421,9 @@ export function AEModePanel({
 
                             let reason = '';
                             if (row.stage === 'initial') {
-                              if (row.highlightClip > aePriorities.etaHighlight) {
+                              if (row.highlightClip > priorities.etaHighlight * 100) {
                                 reason = '> ηh (too much highlight clip)';
-                              } else if (row.shadowClip > aePriorities.etaShadow) {
+                              } else if (row.shadowClip > priorities.etaShadow * 100) {
                                 reason = '> ηs (too much shadow clip)';
                               }
                             }

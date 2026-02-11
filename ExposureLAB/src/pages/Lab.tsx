@@ -161,6 +161,64 @@ export default function Lab() {
     });
   }, [scene, runSimulationSync]);
 
+  // Apply an EV delta relative to some base settings, respecting constraints.
+  // Positive evDelta => more exposure; negative => less.
+  const applyEvDeltaToSettings = (
+    base: CameraSettings,
+    evDelta: number,
+    constraints: Constraints
+  ): CameraSettings => {
+    let remainingEV = evDelta;
+
+    let shutter = base.shutterSeconds;
+    let aperture = base.aperture;
+    let iso = base.iso;
+
+    // 1) Use shutter as primary lever within constraints
+    if (remainingEV !== 0) {
+      if (remainingEV > 0) {
+        // Brighten: lengthen shutter up to shutterMax
+        const shutterScaleMax = constraints.shutterMax / shutter;
+        const shutterEVCapacity = Math.log2(Math.max(1e-6, shutterScaleMax));
+        const useEV = Math.max(0, Math.min(remainingEV, shutterEVCapacity));
+        shutter *= Math.pow(2, useEV);
+        remainingEV -= useEV;
+      } else {
+        // Darken: shorten shutter down to shutterMin
+        const shutterScaleMin = constraints.shutterMin / shutter; // < 1
+        const shutterEVCapacity = Math.log2(Math.max(1e-6, shutterScaleMin)); // negative
+        const useEV = Math.min(0, Math.max(remainingEV, shutterEVCapacity));
+        shutter *= Math.pow(2, useEV);
+        remainingEV -= useEV;
+      }
+    }
+
+    // 2) Use ISO as secondary lever within constraints
+    if (remainingEV !== 0) {
+      const isoMin = 100;
+      if (remainingEV > 0) {
+        const isoScaleMax = constraints.isoMax / iso;
+        const isoEVCapacity = Math.log2(Math.max(1e-6, isoScaleMax));
+        const useEV = Math.max(0, Math.min(remainingEV, isoEVCapacity));
+        iso *= Math.pow(2, useEV);
+        remainingEV -= useEV;
+      } else {
+        const isoScaleMin = isoMin / iso; // <= 1
+        const isoEVCapacity = Math.log2(Math.max(1e-6, isoScaleMin)); // negative
+        const useEV = Math.min(0, Math.max(remainingEV, isoEVCapacity));
+        iso *= Math.pow(2, useEV);
+        remainingEV -= useEV;
+      }
+    }
+
+    // 3) Leave aperture as-is for now (keeps DOF stable). Could be extended later.
+    return {
+      shutterSeconds: Math.max(constraints.shutterMin, Math.min(constraints.shutterMax, shutter)),
+      aperture: Math.max(constraints.apertureMin, Math.min(constraints.apertureMax, aperture)),
+      iso: Math.max(100, Math.min(constraints.isoMax, Math.round(iso))),
+    };
+  };
+
   // Run AE
   const handleRunAE = useCallback(() => {
     if (!scene?.image || !meteringWeights) return;
@@ -176,16 +234,21 @@ export default function Lab() {
     const clampedEV = Math.max(evRange.min, Math.min(evRange.max, chosenEV));
     setAETrace({ ...trace, chosenEV: clampedEV });
 
-    // Interpret chosen EV in the same EV space as allocateSettings / constraints.
-    const { settings } = allocateSettings(clampedEV, constraints, 'balanced');
+    // Interpret chosenEV as an EV delta relative to the current photo settings:
+    // EV = 0 means "as captured"; positive = brighten, negative = darken.
+    const baseSettings: CameraSettings =
+      scene.exposureMetadata ?? manualSettings;
+
+    const newSettings = applyEvDeltaToSettings(baseSettings, clampedEV, constraints);
+
     // Reflect AE result in the manual sliders so the UI shows
     // the exposure that feeds the forward simulation.
-    setManualSettings(settings);
-    setAllocatedSettings(settings);
+    setManualSettings(newSettings);
+    setAllocatedSettings(newSettings);
     // Run simulation immediately on click so it always updates (effect may not fire
     // if allocatedSettings values are identical on consecutive runs)
-    runSimulationDeferred(settings);
-  }, [scene, meteringWeights, aePriorities, constraints, runSimulationDeferred]);
+    runSimulationDeferred(newSettings);
+  }, [scene, meteringWeights, aePriorities, constraints, manualSettings, runSimulationDeferred]);
 
   // Compute telemetry from simulated output
   const telemetry = useMemo(() => {

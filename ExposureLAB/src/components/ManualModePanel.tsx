@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { CameraSettings, ExposureMetadata } from '@/types';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 import { Slider } from '@/components/ui/slider';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -17,11 +18,25 @@ interface ManualModePanelProps {
   onSettingsChange: (settings: CameraSettings) => void;
   /** From image EXIF; EV 0 = as-captured when present */
   exposureMetadata?: ExposureMetadata | null;
+  /** Global mode toggle between MF and AE */
+  mode: 'manual' | 'ae';
+  onModeChange: (mode: 'manual' | 'ae') => void;
 }
 
-type CameraProgramMode = 'manual' | 'aperture_priority' | 'shutter_priority' | 'manual_auto_iso';
+type CameraProgramMode =
+  | 'manual'
+  | 'aperture_priority'
+  | 'shutter_priority'
+  | 'manual_auto_iso'
+  | 'auto_ae';
 
-export function ManualModePanel({ settings, onSettingsChange, exposureMetadata }: ManualModePanelProps) {
+export function ManualModePanel({
+  settings,
+  onSettingsChange,
+  exposureMetadata,
+  mode,
+  onModeChange,
+}: ManualModePanelProps) {
   const [programMode, setProgramMode] = useState<CameraProgramMode>('manual');
 
   const evOffset = exposureMetadata
@@ -134,20 +149,33 @@ export function ManualModePanel({ settings, onSettingsChange, exposureMetadata }
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Camera Mode</CardTitle>
-        <CardDescription>
-          Choose between full manual, aperture/shutter priority, or manual with auto ISO
-        </CardDescription>
+        <div>
+          <CardTitle>Camera Mode</CardTitle>
+          <CardDescription>
+            Choose between full manual, aperture/shutter priority, manual with auto ISO, or full AE
+          </CardDescription>
+        </div>
         <div className="mt-4">
           <Tabs
             value={programMode}
-            onValueChange={(value) => setProgramMode(value as CameraProgramMode)}
+            onValueChange={(value) => {
+              const nextMode = value as CameraProgramMode;
+              setProgramMode(nextMode);
+              // When user selects AE in the program bar, switch global mode to AE.
+              // All other program modes are treated as manual-focus (MF) variants.
+              if (nextMode === 'auto_ae') {
+                onModeChange('ae');
+              } else {
+                onModeChange('manual');
+              }
+            }}
           >
-            <TabsList className="grid grid-cols-4 w-full">
+            <TabsList className="grid grid-cols-5 w-full">
               <TabsTrigger value="manual">M</TabsTrigger>
               <TabsTrigger value="aperture_priority">Av</TabsTrigger>
               <TabsTrigger value="shutter_priority">Tv</TabsTrigger>
               <TabsTrigger value="manual_auto_iso">M + Auto ISO</TabsTrigger>
+              <TabsTrigger value="auto_ae">AE</TabsTrigger>
             </TabsList>
           </Tabs>
         </div>
@@ -155,7 +183,8 @@ export function ManualModePanel({ settings, onSettingsChange, exposureMetadata }
       <CardContent className="space-y-6">
         {(programMode === 'manual' ||
           programMode === 'shutter_priority' ||
-          programMode === 'manual_auto_iso') && (
+          programMode === 'manual_auto_iso' ||
+          programMode === 'auto_ae') && (
           <div className="space-y-2">
             <div className="flex items-center justify-between">
               <Label htmlFor="shutter">Shutter Speed</Label>
@@ -165,6 +194,7 @@ export function ManualModePanel({ settings, onSettingsChange, exposureMetadata }
             </div>
             <Slider
               id="shutter"
+              disabled={mode === 'ae'}
               value={[shutterToSlider(settings.shutterSeconds)]}
               onValueChange={([value]) => {
                 const newShutter = sliderToShutter(value);
@@ -189,7 +219,8 @@ export function ManualModePanel({ settings, onSettingsChange, exposureMetadata }
 
         {(programMode === 'manual' ||
           programMode === 'aperture_priority' ||
-          programMode === 'manual_auto_iso') && (
+          programMode === 'manual_auto_iso' ||
+          programMode === 'auto_ae') && (
           <div className="space-y-2">
             <div className="flex items-center justify-between">
               <Label htmlFor="aperture">Aperture (f-number)</Label>
@@ -199,6 +230,7 @@ export function ManualModePanel({ settings, onSettingsChange, exposureMetadata }
             </div>
             <Slider
               id="aperture"
+              disabled={mode === 'ae'}
               value={[apertureToSlider(settings.aperture)]}
               onValueChange={([value]) => {
                 const newAperture = sliderToAperture(value);
@@ -226,7 +258,8 @@ export function ManualModePanel({ settings, onSettingsChange, exposureMetadata }
 
         {(programMode === 'manual' ||
           programMode === 'aperture_priority' ||
-          programMode === 'shutter_priority') && (
+          programMode === 'shutter_priority' ||
+          programMode === 'auto_ae') && (
           <div className="space-y-2">
             <div className="flex items-center justify-between">
               <Label htmlFor="iso">ISO</Label>
@@ -234,6 +267,7 @@ export function ManualModePanel({ settings, onSettingsChange, exposureMetadata }
             </div>
             <Slider
               id="iso"
+              disabled={mode === 'ae'}
               value={[isoToSlider(settings.iso)]}
               onValueChange={([value]) => {
                 const newISO = sliderToISO(value);
