@@ -187,7 +187,12 @@ export function ManualModePanel({
           programMode === 'auto_ae') && (
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <Label htmlFor="shutter">Shutter Speed</Label>
+              <Label
+                htmlFor="shutter"
+                title="Controls how long the sensor gathers light; each doubling/halving of time changes exposure by 1 EV."
+              >
+                Shutter Speed
+              </Label>
               <span className="text-sm font-mono">
                 {formatShutter(settings.shutterSeconds)}
               </span>
@@ -223,7 +228,12 @@ export function ManualModePanel({
           programMode === 'auto_ae') && (
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <Label htmlFor="aperture">Aperture (f-number)</Label>
+              <Label
+                htmlFor="aperture"
+                title="Controls how wide the lens opens; each full stop lets in twice or half as much light and also changes depth of field."
+              >
+                Aperture (f-number)
+              </Label>
               <span className="text-sm font-mono">
                 f/{settings.aperture.toFixed(1)}
               </span>
@@ -262,7 +272,12 @@ export function ManualModePanel({
           programMode === 'auto_ae') && (
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <Label htmlFor="iso">ISO</Label>
+              <Label
+                htmlFor="iso"
+                title="Amplifies the sensor signal; higher ISO brightens the image but increases noise, in EV steps like shutter and aperture."
+              >
+                ISO
+              </Label>
               <span className="text-sm font-mono">{settings.iso}</span>
             </div>
             <Slider

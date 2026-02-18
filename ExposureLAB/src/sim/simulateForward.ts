@@ -146,9 +146,10 @@ export function simulateForward(
     processed[i + 3] = image.data[i + 3];
   }
   
-  // Step 2: Apply exposure scaling (relative to capture settings)
-  // When settings match scene.exposureMetadata, output = input (scale = 1)
-  // Light ∝ (shutter × ISO) / aperture² — smaller aperture = less light
+  // Step 2: Apply exposure scaling (relative to capture/settings)
+  // Light ∝ (shutter × ISO) / aperture² — smaller aperture = less light.
+  // When settings match the chosen reference, exposureScale = 1, so
+  // EV = 0 truly means "as processed" for this image.
   const evCurrent = Math.log2(
     (settings.shutterSeconds * (settings.iso / 100)) / (settings.aperture * settings.aperture)
   );
@@ -157,10 +158,7 @@ export function simulateForward(
     ? Math.log2(
         (meta.shutterSeconds * (meta.iso / 100)) / (meta.aperture * meta.aperture)
       )
-    : Math.log2(
-        // Fallback reference when no EXIF: f/2.8, 1/60s, ISO 100
-        ((1 / 60) * (100 / 100)) / (2.8 * 2.8)
-      );
+    : evCurrent; // If no EXIF, treat current settings as the reference
   const exposureScale = Math.pow(2, evCurrent - evRef);
   
   for (let i = 0; i < processed.length; i += 4) {
@@ -173,6 +171,15 @@ export function simulateForward(
   // σ² = (K / ISO) + σr²
   const variance = (simParams.fullWell / settings.iso) + (simParams.readNoise * simParams.readNoise);
   const stdDev = Math.sqrt(variance);
+
+  // If we have EXIF, treat its ISO as the "input" ISO that already exists
+  // in the uploaded image. When the simulated ISO goes above this input ISO,
+  // we apply additional noise on top proportional to the ISO gain.
+  const baseIso = scene.exposureMetadata?.iso ?? settings.iso;
+  const isoGain = baseIso > 0 ? settings.iso / baseIso : 1;
+  // Boost noise in proportion to ISO gain, but do it in std‑dev space so it
+  // grows more gently (≈ sqrt behavior instead of fully linear explosion).
+  const noiseBoost = isoGain > 1 ? Math.sqrt(isoGain) : 1;
   
   // Apply noise as variance (deterministic - adds variance to signal)
   // For display, we'll add a small amount of noise for realism
@@ -180,7 +187,11 @@ export function simulateForward(
     // Add noise proportional to signal (shot noise) + read noise
     const signal = (processed[i] + processed[i + 1] + processed[i + 2]) / 3;
     const shotNoise = Math.sqrt(signal * simParams.fullWell / settings.iso) / simParams.fullWell;
-    const totalNoise = Math.sqrt(shotNoise * shotNoise + (stdDev / simParams.fullWell) * (stdDev / simParams.fullWell));
+    const totalNoiseBase = Math.sqrt(
+      shotNoise * shotNoise +
+        (stdDev / simParams.fullWell) * (stdDev / simParams.fullWell)
+    );
+    const totalNoise = totalNoiseBase * noiseBoost;
     
     // Apply noise (simplified - just add variance)
     processed[i] = Math.max(0, Math.min(1, processed[i] + totalNoise * (Math.random() - 0.5) * 0.1));

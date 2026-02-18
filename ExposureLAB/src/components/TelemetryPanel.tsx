@@ -14,21 +14,39 @@ export function TelemetryPanel({ telemetry, luminance }: TelemetryPanelProps) {
 
     const bins = 64;
     const histogram = new Array(bins).fill(0);
-    
+
+    // For display, stretch the *actual* luminance range to fill [0, 1],
+    // so the histogram always uses the full x-axis even if the image
+    // only occupies a subrange like [0, 0.5]. This is purely visual;
+    // AE math still uses absolute [0, 1] elsewhere.
+    let min = Infinity;
+    let maxVal = -Infinity;
     for (let i = 0; i < luminance.length; i++) {
-      const value = Math.max(0, Math.min(1, luminance[i]));
-      const bin = Math.floor(value * (bins - 1));
+      const v = luminance[i];
+      if (v < min) min = v;
+      if (v > maxVal) maxVal = v;
+    }
+    if (!Number.isFinite(min) || !Number.isFinite(maxVal) || min === maxVal) {
+      return [];
+    }
+    const range = maxVal - min;
+
+    for (let i = 0; i < luminance.length; i++) {
+      const value = luminance[i];
+      const normalized = (value - min) / range; // 0–1 over actual used range
+      const clamped = Math.max(0, Math.min(1, normalized));
+      const bin = Math.floor(clamped * (bins - 1));
       histogram[bin]++;
     }
 
     // Normalize to 0-1 for display
-    const max = Math.max(...histogram);
-    if (max === 0) return [];
+    const maxCount = Math.max(...histogram);
+    if (maxCount === 0) return [];
 
     return histogram.map((count, index) => ({
       bin: index,
-      value: count / max,
-      luminance: index / bins,
+      value: count / maxCount,
+      luminance: index / bins, // 0–1 over stretched display range
     }));
   })();
 

@@ -8,7 +8,6 @@ interface InteractiveSceneCanvasProps {
   radialMasks?: RadialMaskConfig[];
   linearMasks?: LinearMaskConfig[];
   displayWidth?: number;
-  displayHeight?: number;
   showMaskOverlay?: boolean;
   onAddRadialMask: (centerX: number, centerY: number, radiusX: number, radiusY: number) => void;
   onAddLinearMask: (angle: number, offset: number, width: number) => void;
@@ -22,7 +21,6 @@ export function InteractiveSceneCanvas({
   radialMasks,
   linearMasks,
   displayWidth,
-  displayHeight,
   showMaskOverlay = true,
   onAddRadialMask,
   onAddLinearMask,
@@ -268,7 +266,7 @@ export function InteractiveSceneCanvas({
           className="max-w-full h-auto cursor-crosshair"
           style={{ 
             imageRendering: 'auto',
-            ...(displayWidth && displayHeight ? { width: `${displayWidth}px`, height: `${displayHeight}px` } : {})
+            ...(displayWidth ? { width: `${displayWidth}px` } : {})
           }}
           onMouseDown={handleMouseDown}
           onMouseMove={handleMouseMove}

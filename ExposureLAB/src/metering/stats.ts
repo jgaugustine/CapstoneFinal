@@ -1,6 +1,9 @@
 import { ImageRGBAFloat, WeightMap, Mask, Telemetry } from '@/types';
 
-// Compute weighted luminance: Y = 0.2126*R + 0.7152*G + 0.0722*B (linear)
+// Compute weighted luminance: Y = 0.2126*R + 0.7152*G + 0.0722*B (linear).
+// The weights are not applied here; they are applied later when building
+// histograms / telemetry so that different AE algorithms can plug in their
+// own manipulated weight maps.
 export function computeWeightedLuminance(image: ImageRGBAFloat, weights: WeightMap): Float32Array {
   const luminance = new Float32Array(image.width * image.height);
   
@@ -20,40 +23,26 @@ export function computeWeightedHistogram(
   luminance: Float32Array,
   weights: WeightMap,
   bins: number = 256
-): { bins: number[], cdf: number[], min: number, max: number } {
-  // Find actual min/max of luminance values to use dynamic range
-  let min = Infinity;
-  let max = -Infinity;
-  for (let i = 0; i < luminance.length; i++) {
-    const value = luminance[i];
-    if (value < min) min = value;
-    if (value > max) max = value;
-  }
-  
-  // Handle edge case where all values are the same
-  if (min === max) {
-    const cdf = new Array(bins).fill(0);
-    let total = 0;
-    for (let i = 0; i < weights.length; i++) {
-      total += weights[i];
-    }
-    for (let i = 0; i < bins; i++) {
-      cdf[i] = total;
-    }
-    return { bins: new Array(bins).fill(0), cdf, min, max };
-  }
-  
-  const range = max - min;
+): { bins: number[]; cdf: number[]; min: number; max: number } {
+  // IMPORTANT: We treat luminance as an absolute linear value in [0, 1].
+  // This keeps percentiles and the midtone target in the same space and
+  // avoids per-call dynamic rescaling that would make the histogram and
+  // median "float" with EV.
+  const min = 0;
+  const max = 1;
   const histogram = new Array(bins).fill(0);
-  
+
   for (let i = 0; i < luminance.length; i++) {
-    const value = luminance[i];
-    // Map value to bin: (value - min) / range * bins
-    const normalized = (value - min) / range;
-    const bin = Math.floor(Math.max(0, Math.min(bins - 1, normalized * bins)));
+    // Clamp luminance into [0, 1] for histogram purposes. Values > 1 are
+    // considered clipped highlights; values < 0 shouldn't occur but are
+    // clamped defensively.
+    const valueClamped = Math.max(0, Math.min(1, luminance[i]));
+    const bin = Math.floor(
+      Math.max(0, Math.min(bins - 1, valueClamped * (bins - 1)))
+    );
     histogram[bin] += weights[i];
   }
-  
+
   // Compute CDF
   const cdf = new Array(bins);
   let sum = 0;
@@ -61,7 +50,7 @@ export function computeWeightedHistogram(
     sum += histogram[i];
     cdf[i] = sum;
   }
-  
+
   return { bins: histogram, cdf, min, max };
 }
 
@@ -104,17 +93,28 @@ export function computeClipping(
 ): { highlightClip: number, shadowClip: number } {
   let highlightClip = 0;
   let shadowClip = 0;
+  let totalWeight = 0;
   
   for (let i = 0; i < luminance.length; i++) {
     const value = luminance[i];
+    const w = weights[i];
+    totalWeight += w;
     if (value >= 1.0) {
-      highlightClip += weights[i];
+      highlightClip += w;
     }
     if (value <= epsilon) {
-      shadowClip += weights[i];
+      shadowClip += w;
     }
   }
-  
+
+  // Normalize by total weight so results are proper fractions of the metered
+  // pixels regardless of whether the incoming weight map was normalized.
+  if (totalWeight > 0) {
+    const invTotal = 1 / totalWeight;
+    highlightClip *= invTotal;
+    shadowClip *= invTotal;
+  }
+
   return { highlightClip, shadowClip };
 }
 

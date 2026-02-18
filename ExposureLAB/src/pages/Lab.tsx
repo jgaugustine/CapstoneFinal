@@ -9,11 +9,13 @@ import {
   AETrace,
   Constraints,
   WeightMap,
+  AllocationLog,
+  AEAlgorithm,
 } from '@/types';
 import { loadImage } from '@/io/loadImage';
 import { simulateForward } from '@/sim/simulateForward';
 import { runLexiAE } from '@/ae/runLexiAE';
-import { allocateSettings, evRangeFromConstraints } from '@/allocation/allocateSettings';
+import { allocateSettings, evRangeFromConstraints, settingsToEV } from '@/allocation/allocateSettings';
 import {
   computeMatrixWeights,
   computeCenterWeights,
@@ -49,11 +51,16 @@ export default function Lab() {
     midtoneTarget: 0.18,
   });
   const [aeTrace, setAETrace] = useState<AETrace | null>(null);
+  const [aeAlgorithm, setAEAlgorithm] = useState<AEAlgorithm>('global');
   const [allocatedSettings, setAllocatedSettings] = useState<CameraSettings | null>(null);
+  const [allocationLog, setAllocationLog] = useState<AllocationLog | null>(null);
   const [simOutput, setSimOutput] = useState<SimOutput | null>(null);
   const [showClipping, setShowClipping] = useState(false);
   const [isRendering, setIsRendering] = useState(false);
   const rafIdRef = useRef<number>(0);
+  const [lastBaseEV, setLastBaseEV] = useState<number | null>(null);
+  const [lastTargetEV, setLastTargetEV] = useState<number | null>(null);
+  const [lastClampedTargetEV, setLastClampedTargetEV] = useState<number | null>(null);
 
   // Simulation parameters
   const simParams: SimParams = {
@@ -113,6 +120,7 @@ export default function Lab() {
       setSimOutput(null);
       setAETrace(null);
       setAllocatedSettings(null);
+      setAllocationLog(null);
       // Set slider defaults from EXIF when available, else use fallback
       setManualSettings(
         exposureMetadata
@@ -161,94 +169,66 @@ export default function Lab() {
     });
   }, [scene, runSimulationSync]);
 
-  // Apply an EV delta relative to some base settings, respecting constraints.
-  // Positive evDelta => more exposure; negative => less.
-  const applyEvDeltaToSettings = (
-    base: CameraSettings,
-    evDelta: number,
-    constraints: Constraints
-  ): CameraSettings => {
-    let remainingEV = evDelta;
-
-    let shutter = base.shutterSeconds;
-    let aperture = base.aperture;
-    let iso = base.iso;
-
-    // 1) Use shutter as primary lever within constraints
-    if (remainingEV !== 0) {
-      if (remainingEV > 0) {
-        // Brighten: lengthen shutter up to shutterMax
-        const shutterScaleMax = constraints.shutterMax / shutter;
-        const shutterEVCapacity = Math.log2(Math.max(1e-6, shutterScaleMax));
-        const useEV = Math.max(0, Math.min(remainingEV, shutterEVCapacity));
-        shutter *= Math.pow(2, useEV);
-        remainingEV -= useEV;
-      } else {
-        // Darken: shorten shutter down to shutterMin
-        const shutterScaleMin = constraints.shutterMin / shutter; // < 1
-        const shutterEVCapacity = Math.log2(Math.max(1e-6, shutterScaleMin)); // negative
-        const useEV = Math.min(0, Math.max(remainingEV, shutterEVCapacity));
-        shutter *= Math.pow(2, useEV);
-        remainingEV -= useEV;
-      }
-    }
-
-    // 2) Use ISO as secondary lever within constraints
-    if (remainingEV !== 0) {
-      const isoMin = 100;
-      if (remainingEV > 0) {
-        const isoScaleMax = constraints.isoMax / iso;
-        const isoEVCapacity = Math.log2(Math.max(1e-6, isoScaleMax));
-        const useEV = Math.max(0, Math.min(remainingEV, isoEVCapacity));
-        iso *= Math.pow(2, useEV);
-        remainingEV -= useEV;
-      } else {
-        const isoScaleMin = isoMin / iso; // <= 1
-        const isoEVCapacity = Math.log2(Math.max(1e-6, isoScaleMin)); // negative
-        const useEV = Math.min(0, Math.max(remainingEV, isoEVCapacity));
-        iso *= Math.pow(2, useEV);
-        remainingEV -= useEV;
-      }
-    }
-
-    // 3) Leave aperture as-is for now (keeps DOF stable). Could be extended later.
-    return {
-      shutterSeconds: Math.max(constraints.shutterMin, Math.min(constraints.shutterMax, shutter)),
-      aperture: Math.max(constraints.apertureMin, Math.min(constraints.apertureMax, aperture)),
-      iso: Math.max(100, Math.min(constraints.isoMax, Math.round(iso))),
-    };
-  };
-
   // Run AE
   const handleRunAE = useCallback(() => {
     if (!scene?.image || !meteringWeights) return;
 
-    const evRange = evRangeFromConstraints(constraints, 'balanced');
-    const { chosenEV, trace } = runLexiAE(
+    // Meter on the same "base scene" that the forward simulation uses:
+    // the uploaded image with global illumination and all active masks
+    // baked in. This keeps AE decisions aligned with what the user sees.
+    const meteringImage = applyMasksToScene(
       scene.image,
-      meteringWeights,
-      aePriorities,
-      { ...evRange, step: Math.min(evRange.step, 0.1) }
+      scene.illumination,
+      scene.radialMasks,
+      scene.linearMasks
     );
 
-    const clampedEV = Math.max(evRange.min, Math.min(evRange.max, chosenEV));
-    setAETrace({ ...trace, chosenEV: clampedEV });
+    const evRange = evRangeFromConstraints(constraints, 'balanced');
+    // Use a wide, fixed EV sweep so the explainer charts show the full objective curve
+    // (e.g. entropy peaking, midtone error dipping), reinforcing that the chosen EV is the optimum.
+    const sweepRange = { min: -6, max: 6, step: 0.1 };
+    const { chosenEV, trace } = runLexiAE(
+      meteringImage,
+      meteringWeights,
+      aePriorities,
+      sweepRange,
+      aeAlgorithm
+    );
 
-    // Interpret chosenEV as an EV delta relative to the current photo settings:
-    // EV = 0 means "as captured"; positive = brighten, negative = darken.
-    const baseSettings: CameraSettings =
-      scene.exposureMetadata ?? manualSettings;
+    // Interpret the AE output as a ΔEV relative to the current exposure:
+    // ΔEV = 0 means "keep current settings"; positive = brighten,
+    // negative = darken. Convert this into an absolute target EV by
+    // adding it to the EV of the current manual settings.
+    const baseEV = settingsToEV(manualSettings);
+    const targetEV = baseEV + chosenEV;
 
-    const newSettings = applyEvDeltaToSettings(baseSettings, clampedEV, constraints);
+    // Clamp the target EV into the feasible allocation range and
+    // use the allocation optimizer to split it across shutter,
+    // aperture, and ISO according to the current preference.
+    const clampedTargetEV = Math.max(evRange.min, Math.min(evRange.max, targetEV));
+    const { settings: newSettings, log } = allocateSettings(
+      clampedTargetEV,
+      constraints,
+      'balanced'
+    );
 
-    // Reflect AE result in the manual sliders so the UI shows
-    // the exposure that feeds the forward simulation.
-    setManualSettings(newSettings);
-    setAllocatedSettings(newSettings);
-    // Run simulation immediately on click so it always updates (effect may not fire
-    // if allocatedSettings values are identical on consecutive runs)
-    runSimulationDeferred(newSettings);
-  }, [scene, meteringWeights, aePriorities, constraints, manualSettings, runSimulationDeferred]);
+    // Keep the AE trace's chosenEV as the ΔEV reported by the AE
+    // algorithm so that the UI honestly reflects its decision;
+    // the allocator's absolute EV is shown via evBreakdown.
+  setAETrace(trace);
+  setAllocationLog(log);
+  setLastBaseEV(baseEV);
+  setLastTargetEV(targetEV);
+  setLastClampedTargetEV(clampedTargetEV);
+
+  // Reflect AE result in the manual sliders so the UI shows
+  // the exposure that feeds the forward simulation.
+  setManualSettings(newSettings);
+  setAllocatedSettings(newSettings);
+  // Run simulation immediately on click so it always updates (effect may not fire
+  // if allocatedSettings values are identical on consecutive runs)
+  runSimulationDeferred(newSettings);
+  }, [scene, meteringWeights, aePriorities, aeAlgorithm, constraints, runSimulationDeferred, manualSettings]);
 
   // Compute telemetry from simulated output
   const telemetry = useMemo(() => {
@@ -376,9 +356,16 @@ export default function Lab() {
             <AEModePanel
               priorities={aePriorities}
               onPrioritiesChange={setAEPriorities}
+              algorithm={aeAlgorithm}
+              onAlgorithmChange={setAEAlgorithm}
               onRunAE={handleRunAE}
               trace={aeTrace}
               allocatedSettings={allocatedSettings}
+              allocationLog={allocationLog}
+              constraints={constraints}
+              baseEV={lastBaseEV}
+              targetEV={lastTargetEV}
+              clampedTargetEV={lastClampedTargetEV}
             />
           </TabsContent>
         </Tabs>

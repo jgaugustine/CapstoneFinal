@@ -35,18 +35,26 @@ function quantizeEV(ev: number, step: number): number {
   return Math.round(ev / step) * step;
 }
 
-// Convert EV to shutter speed (in seconds). Higher EV = more exposure = longer shutter
-function evToShutter(ev: number, baseShutter: number = 1/60): number {
+// Base "reference" settings used for EV math. These are chosen to be
+// representative of a typical camera default and are shared between
+// allocation and EV breakdown helpers so that EV is computed
+// consistently across the app.
+const BASE_SHUTTER = 1 / 60;
+const BASE_APERTURE = 2.8;
+const BASE_ISO = 100;
+
+// Convert EV to shutter speed (in seconds). Higher EV = more exposure = longer shutter.
+function evToShutter(ev: number, baseShutter: number = BASE_SHUTTER): number {
   return baseShutter * Math.pow(2, ev);
 }
 
-// Convert EV to aperture (f-number). Higher EV = more exposure = wider aperture (lower f-number)
-function evToAperture(ev: number, baseAperture: number = 2.8): number {
+// Convert EV to aperture (f-number). Higher EV = more exposure = wider aperture (lower f-number).
+function evToAperture(ev: number, baseAperture: number = BASE_APERTURE): number {
   return baseAperture * Math.pow(Math.sqrt(2), -ev);
 }
 
 // Convert EV to ISO
-function evToISO(ev: number, baseISO: number = 100): number {
+function evToISO(ev: number, baseISO: number = BASE_ISO): number {
   return baseISO * Math.pow(2, ev);
 }
 
@@ -111,50 +119,45 @@ export function allocateSettings(
   let aperture: number;
   let iso: number;
   
-  // Base values (typical camera defaults)
-  const baseShutter = 1/60;
-  const baseAperture = 2.8;
-  const baseISO = 100;
-  
   if (preference === 'shutter') {
     // Prioritize shutter speed
-    shutter = evToShutter(quantizedEV, baseShutter);
+    shutter = evToShutter(quantizedEV, BASE_SHUTTER);
     shutter = Math.max(constraints.shutterMin, Math.min(constraints.shutterMax, shutter));
     
     // Remaining EV for aperture and ISO
-    const remainingEV = quantizedEV - Math.log2(shutter / baseShutter);
+    const remainingEV = quantizedEV - Math.log2(shutter / BASE_SHUTTER);
     const apertureEV = remainingEV * 0.6;
     const isoEV = remainingEV * 0.4;
     
-    aperture = evToAperture(apertureEV, baseAperture);
+    aperture = evToAperture(apertureEV, BASE_APERTURE);
     aperture = quantizeAperture(aperture, constraints.apertureMin, constraints.apertureMax);
     
-    const finalApertureEV = Math.log2(baseAperture / aperture) / Math.log2(Math.sqrt(2));
+    const finalApertureEV = Math.log2(BASE_APERTURE / aperture) / Math.log2(Math.sqrt(2));
     const finalISOEV = remainingEV - finalApertureEV;
-    iso = evToISO(finalISOEV, baseISO);
+    iso = evToISO(finalISOEV, BASE_ISO);
     iso = quantizeISO(iso, constraints.isoMax);
     
   } else if (preference === 'aperture') {
     // Prioritize aperture
-    aperture = evToAperture(quantizedEV, baseAperture);
+    aperture = evToAperture(quantizedEV, BASE_APERTURE);
     aperture = quantizeAperture(aperture, constraints.apertureMin, constraints.apertureMax);
     
-    const apertureEV = Math.log2(baseAperture / aperture) / Math.log2(Math.sqrt(2));
+    const apertureEV = Math.log2(BASE_APERTURE / aperture) / Math.log2(Math.sqrt(2));
     const remainingEV = quantizedEV - apertureEV;
     const shutterEV = remainingEV * 0.6;
     const isoEV = remainingEV * 0.4;
     
-    shutter = evToShutter(shutterEV, baseShutter);
+    shutter = evToShutter(shutterEV, BASE_SHUTTER);
     shutter = Math.max(constraints.shutterMin, Math.min(constraints.shutterMax, shutter));
     
-    const finalShutterEV = Math.log2(shutter / baseShutter);
+    const finalShutterEV = Math.log2(shutter / BASE_SHUTTER);
     const finalISOEV = remainingEV - finalShutterEV;
-    iso = evToISO(finalISOEV, baseISO);
+    iso = evToISO(finalISOEV, BASE_ISO);
     iso = quantizeISO(iso, constraints.isoMax);
     
   } else if (preference === 'iso') {
     // Minimize ISO
-    iso = baseISO;
+    iso = BASE_ISO;
     const isoEV = 0;
     const remainingEV = quantizedEV - isoEV;
     
@@ -162,10 +165,10 @@ export function allocateSettings(
     const shutterEV = remainingEV * 0.5;
     const apertureEV = remainingEV * 0.5;
     
-    shutter = evToShutter(shutterEV, baseShutter);
+    shutter = evToShutter(shutterEV, BASE_SHUTTER);
     shutter = Math.max(constraints.shutterMin, Math.min(constraints.shutterMax, shutter));
     
-    aperture = evToAperture(apertureEV, baseAperture);
+    aperture = evToAperture(apertureEV, BASE_APERTURE);
     aperture = quantizeAperture(aperture, constraints.apertureMin, constraints.apertureMax);
     
   } else {
@@ -174,13 +177,13 @@ export function allocateSettings(
     const apertureEV = quantizedEV / 3;
     const isoEV = quantizedEV / 3;
     
-    shutter = evToShutter(shutterEV, baseShutter);
+    shutter = evToShutter(shutterEV, BASE_SHUTTER);
     shutter = Math.max(constraints.shutterMin, Math.min(constraints.shutterMax, shutter));
     
-    aperture = evToAperture(apertureEV, baseAperture);
+    aperture = evToAperture(apertureEV, BASE_APERTURE);
     aperture = quantizeAperture(aperture, constraints.apertureMin, constraints.apertureMax);
     
-    iso = evToISO(isoEV, baseISO);
+    iso = evToISO(isoEV, BASE_ISO);
     iso = quantizeISO(iso, constraints.isoMax);
   }
   
@@ -208,9 +211,9 @@ export function allocateSettings(
 
   // Populate EV breakdown in log if we have finite values
   if (Number.isFinite(quantizedEV) && Number.isFinite(safeShutter) && Number.isFinite(safeAperture) && Number.isFinite(safeIso)) {
-    const shutterEVFinal = Math.log2(safeShutter / baseShutter);
-    const apertureEVFinal = Math.log2(baseAperture / safeAperture) / Math.log2(Math.sqrt(2));
-    const isoEVFinal = Math.log2(safeIso / baseISO);
+    const shutterEVFinal = Math.log2(safeShutter / BASE_SHUTTER);
+    const apertureEVFinal = Math.log2(BASE_APERTURE / safeAperture) / Math.log2(Math.sqrt(2));
+    const isoEVFinal = Math.log2(safeIso / BASE_ISO);
     log.evBreakdown = {
       shutterEV: shutterEVFinal,
       apertureEV: apertureEVFinal,
@@ -227,6 +230,20 @@ export function allocateSettings(
     },
     log,
   };
+}
+
+/**
+ * Compute the total EV of a concrete set of camera settings relative to the
+ * shared base settings (BASE_SHUTTER / BASE_APERTURE / BASE_ISO). This is
+ * the inverse of the allocation logic used when populating evBreakdown and
+ * lets callers interpret the AE-chosen ΔEV as a delta from the current
+ * exposure.
+ */
+export function settingsToEV(settings: CameraSettings): number {
+  const shutterEV = Math.log2(settings.shutterSeconds / BASE_SHUTTER);
+  const apertureEV = Math.log2(BASE_APERTURE / settings.aperture) / Math.log2(Math.sqrt(2));
+  const isoEV = Math.log2(settings.iso / BASE_ISO);
+  return shutterEV + apertureEV + isoEV;
 }
 
 function clampFinite(x: number, min: number, max: number): number {

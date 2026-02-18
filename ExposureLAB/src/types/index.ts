@@ -58,6 +58,10 @@ export type ExposureMetadata = {
 }
 
 export type Constraints = {
+  /**
+   * Reserved for future use to indicate "handheld" capture scenarios.
+   * Currently not used by the allocation or simulation pipeline.
+   */
   handheld: boolean;
   isoMax: number;
   shutterMin: number;
@@ -101,6 +105,8 @@ export type AETrace = {
     stage: AECandidateStage;
     /** True if this EV was computed past the sweep (for display only; not used in choice) */
     extended?: boolean;
+    /** Histogram entropy at this EV (entropy mode only); used for optimization plots */
+    entropy?: number;
   }>;
   stage1Feasible: number[]; // EV values
   stage2Feasible: number[];
@@ -113,6 +119,12 @@ export type AETrace = {
   relaxationStepsShadow: AERelaxationStep[];
   /** Human-readable explanation of why this EV was chosen */
   chosenReason: string;
+  /** Manipulated histogram at the chosen EV (for explainer); bins over [min, max] luminance */
+  chosenHistogram?: { bins: number[]; min: number; max: number };
+  /** Manipulated histogram at EV=0 (reference exposure) so Step 1 matches scene; bins + median at zero */
+  manipulatedHistogramAtZero?: { bins: number[]; min: number; max: number; median: number };
+  /** Algorithm weight map for explainer (may be downscaled); 0–1 per pixel, same layout as image */
+  algorithmWeightMap?: { width: number; height: number; data: Float32Array };
 }
 
 export type Telemetry = {
@@ -127,6 +139,9 @@ export type Telemetry = {
     median: number;
   };
 }
+
+// AE algorithm families for EV selection
+export type AEAlgorithm = 'global' | 'semantic' | 'saliency' | 'entropy';
 
 export type SimParams = {
   fullWell: number; // K
