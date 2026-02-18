@@ -1,11 +1,16 @@
-import { useState } from 'react';
 import { CameraSettings, ExposureMetadata } from '@/types';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Slider } from '@/components/ui/slider';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { APERTURE_STOPS, ISO_STOPS, SHUTTER_SPEEDS, snapToNearest } from '@/utils/cameraSettings';
+import {
+  APERTURE_STOPS,
+  ISO_STOPS,
+  SHUTTER_SPEEDS,
+  snapToNearest,
+} from '@/utils/cameraSettings';
+import { computeEVBreakdownFromSettings } from '@/allocation/allocateSettings';
 
 // Fallback reference when no EXIF metadata (f/2.8, 1/60s, ISO 100)
 const DEFAULT_REF = { aperture: 2.8, shutterSeconds: 1 / 60, iso: 100 };
@@ -21,9 +26,12 @@ interface ManualModePanelProps {
   /** Global mode toggle between MF and AE */
   mode: 'manual' | 'ae';
   onModeChange: (mode: 'manual' | 'ae') => void;
+  /** Current camera program mode (M/Av/Tv/M+Auto ISO/AE) */
+  programMode: CameraProgramMode;
+  onProgramModeChange: (mode: CameraProgramMode) => void;
 }
 
-type CameraProgramMode =
+export type CameraProgramMode =
   | 'manual'
   | 'aperture_priority'
   | 'shutter_priority'
@@ -36,9 +44,9 @@ export function ManualModePanel({
   exposureMetadata,
   mode,
   onModeChange,
+  programMode,
+  onProgramModeChange,
 }: ManualModePanelProps) {
-  const [programMode, setProgramMode] = useState<CameraProgramMode>('manual');
-
   const evOffset = exposureMetadata
     ? evOffsetFromRef(exposureMetadata)
     : evOffsetFromRef(DEFAULT_REF);
@@ -146,6 +154,8 @@ export function ManualModePanel({
     return snapToNearest(rawISO, ISO_STOPS, 100, 25600);
   };
 
+  const evBreakdown = computeEVBreakdownFromSettings(settings);
+
   return (
     <Card>
       <CardHeader>
@@ -160,13 +170,14 @@ export function ManualModePanel({
             value={programMode}
             onValueChange={(value) => {
               const nextMode = value as CameraProgramMode;
-              setProgramMode(nextMode);
-              // When user selects AE in the program bar, switch global mode to AE.
-              // All other program modes are treated as manual-focus (MF) variants.
-              if (nextMode === 'auto_ae') {
-                onModeChange('ae');
-              } else {
+              onProgramModeChange(nextMode);
+              // For any non-manual program mode, show the AE tab so the full
+              // AE Mode panel (algorithm, hyperparameters, and explainers)
+              // is visible; manual keeps the Manual tab.
+              if (nextMode === 'manual') {
                 onModeChange('manual');
+              } else {
+                onModeChange('ae');
               }
             }}
           >
@@ -311,13 +322,39 @@ export function ManualModePanel({
           </div>
         )}
 
-        <div className="pt-4 border-t border-border">
+        <div className="pt-4 border-t border-border space-y-2">
           <div className="text-sm space-y-1">
             <div className="flex justify-between">
               <span className="text-muted-foreground">Exposure Value (EV):</span>
               <span className="font-mono">
-                {(Math.log2((settings.shutterSeconds * (settings.iso / 100)) / (settings.aperture * settings.aperture)) + evOffset).toFixed(2)}
+                {(
+                  Math.log2(
+                    (settings.shutterSeconds * (settings.iso / 100)) /
+                      (settings.aperture * settings.aperture)
+                  ) + evOffset
+                ).toFixed(2)}
               </span>
+            </div>
+          </div>
+          <div className="text-xs space-y-1">
+            <p className="text-muted-foreground">Current settings EV breakdown</p>
+            <div className="space-y-0.5 font-mono">
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Shutter:</span>
+                <span>{evBreakdown.shutterEV.toFixed(2)} EV</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Aperture:</span>
+                <span>{evBreakdown.apertureEV.toFixed(2)} EV</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">ISO:</span>
+                <span>{evBreakdown.isoEV.toFixed(2)} EV</span>
+              </div>
+              <div className="flex justify-between pt-1 border-t border-border">
+                <span className="text-muted-foreground">Total:</span>
+                <span>{evBreakdown.totalEV.toFixed(2)} EV</span>
+              </div>
             </div>
           </div>
         </div>

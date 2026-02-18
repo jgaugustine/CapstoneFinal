@@ -15,7 +15,12 @@ import {
 import { loadImage } from '@/io/loadImage';
 import { simulateForward } from '@/sim/simulateForward';
 import { runLexiAE } from '@/ae/runLexiAE';
-import { allocateSettings, evRangeFromConstraints, settingsToEV } from '@/allocation/allocateSettings';
+import {
+  allocateSettings,
+  evRangeFromConstraints,
+  settingsToEV,
+  Preference,
+} from '@/allocation/allocateSettings';
 import {
   computeMatrixWeights,
   computeCenterWeights,
@@ -29,7 +34,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent } from '@/components/ui/tabs';
 import { ImageCanvas } from '@/components/ImageCanvas';
-import { ManualModePanel } from '@/components/ManualModePanel';
+import { ManualModePanel, CameraProgramMode } from '@/components/ManualModePanel';
 import { AEModePanel } from '@/components/AEModePanel';
 import { MeteringPanel } from '@/components/MeteringPanel';
 import { TelemetryPanel } from '@/components/TelemetryPanel';
@@ -38,6 +43,7 @@ import { ScenePanel } from '@/components/ScenePanel';
 export default function Lab() {
   const [scene, setScene] = useState<SceneState | null>(null);
   const [mode, setMode] = useState<'manual' | 'ae'>('manual');
+  const [programMode, setProgramMode] = useState<CameraProgramMode>('manual');
   const [manualSettings, setManualSettings] = useState<CameraSettings>({
     shutterSeconds: 1/60,
     aperture: 2.8,
@@ -169,80 +175,107 @@ export default function Lab() {
     });
   }, [scene, runSimulationSync]);
 
+  const runAEForTargetEV = useCallback(
+    (preference: Preference) => {
+      if (!scene?.image || !meteringWeights) {
+        return null;
+      }
+
+      const meteringImage = applyMasksToScene(
+        scene.image,
+        scene.illumination,
+        scene.radialMasks,
+        scene.linearMasks
+      );
+
+      const evRange = evRangeFromConstraints(constraints, preference);
+      const sweepRange = { min: -6, max: 6, step: 0.1 };
+      const { chosenEV, trace } = runLexiAE(
+        meteringImage,
+        meteringWeights,
+        aePriorities,
+        sweepRange,
+        aeAlgorithm
+      );
+
+      const baseEV = settingsToEV(manualSettings);
+      const targetEV = baseEV + chosenEV;
+      const clampedTargetEV = Math.max(evRange.min, Math.min(evRange.max, targetEV));
+      const { settings: newSettings, log } = allocateSettings(
+        clampedTargetEV,
+        constraints,
+        preference
+      );
+
+      return {
+        newSettings,
+        log,
+        trace,
+        baseEV,
+        targetEV,
+        clampedTargetEV,
+      };
+    },
+    [
+      scene,
+      meteringWeights,
+      aePriorities,
+      aeAlgorithm,
+      constraints,
+      manualSettings,
+    ]
+  );
+
+  const mapProgramModeToPreference = (mode: CameraProgramMode): Preference => {
+    if (mode === 'aperture_priority') return 'aperture';
+    if (mode === 'shutter_priority') return 'shutter';
+    if (mode === 'manual_auto_iso') return 'iso';
+    // manual and auto_ae both map to balanced full-triplet allocation
+    return 'balanced';
+  };
+
   // Run AE
   const handleRunAE = useCallback(() => {
-    if (!scene?.image || !meteringWeights) return;
+    const preference = mapProgramModeToPreference(programMode);
+    const result = runAEForTargetEV(preference);
+    if (!result) return;
 
-    // Meter on the same "base scene" that the forward simulation uses:
-    // the uploaded image with global illumination and all active masks
-    // baked in. This keeps AE decisions aligned with what the user sees.
+    const { newSettings, log, trace, baseEV, targetEV, clampedTargetEV } = result;
+
+    setAETrace(trace);
+    setAllocationLog(log);
+    setLastBaseEV(baseEV);
+    setLastTargetEV(targetEV);
+    setLastClampedTargetEV(clampedTargetEV);
+
+    setManualSettings(newSettings);
+    setAllocatedSettings(newSettings);
+    runSimulationDeferred(newSettings);
+  }, [programMode, runAEForTargetEV, runSimulationDeferred]);
+
+  // Base (scene) luminance for telemetry/histograms: metering image at EV=0 (masks + illumination applied)
+  const sceneLuminance = useMemo(() => {
+    if (!scene?.image || !meteringWeights) return undefined;
     const meteringImage = applyMasksToScene(
       scene.image,
       scene.illumination,
       scene.radialMasks,
       scene.linearMasks
     );
+    return computeWeightedLuminance(meteringImage, meteringWeights);
+  }, [scene, meteringWeights]);
 
-    const evRange = evRangeFromConstraints(constraints, 'balanced');
-    // Use a wide, fixed EV sweep so the explainer charts show the full objective curve
-    // (e.g. entropy peaking, midtone error dipping), reinforcing that the chosen EV is the optimum.
-    const sweepRange = { min: -6, max: 6, step: 0.1 };
-    const { chosenEV, trace } = runLexiAE(
-      meteringImage,
-      meteringWeights,
-      aePriorities,
-      sweepRange,
-      aeAlgorithm
-    );
-
-    // Interpret the AE output as a ΔEV relative to the current exposure:
-    // ΔEV = 0 means "keep current settings"; positive = brighten,
-    // negative = darken. Convert this into an absolute target EV by
-    // adding it to the EV of the current manual settings.
-    const baseEV = settingsToEV(manualSettings);
-    const targetEV = baseEV + chosenEV;
-
-    // Clamp the target EV into the feasible allocation range and
-    // use the allocation optimizer to split it across shutter,
-    // aperture, and ISO according to the current preference.
-    const clampedTargetEV = Math.max(evRange.min, Math.min(evRange.max, targetEV));
-    const { settings: newSettings, log } = allocateSettings(
-      clampedTargetEV,
-      constraints,
-      'balanced'
-    );
-
-    // Keep the AE trace's chosenEV as the ΔEV reported by the AE
-    // algorithm so that the UI honestly reflects its decision;
-    // the allocator's absolute EV is shown via evBreakdown.
-  setAETrace(trace);
-  setAllocationLog(log);
-  setLastBaseEV(baseEV);
-  setLastTargetEV(targetEV);
-  setLastClampedTargetEV(clampedTargetEV);
-
-  // Reflect AE result in the manual sliders so the UI shows
-  // the exposure that feeds the forward simulation.
-  setManualSettings(newSettings);
-  setAllocatedSettings(newSettings);
-  // Run simulation immediately on click so it always updates (effect may not fire
-  // if allocatedSettings values are identical on consecutive runs)
-  runSimulationDeferred(newSettings);
-  }, [scene, meteringWeights, aePriorities, aeAlgorithm, constraints, runSimulationDeferred, manualSettings]);
-
-  // Compute telemetry from simulated output
-  const telemetry = useMemo(() => {
-    if (!simOutput?.image || !meteringWeights) return null;
-
-    const luminance = computeWeightedLuminance(simOutput.image, meteringWeights);
-    return computeTelemetry(luminance, meteringWeights, aePriorities.epsilonShadow, scene?.subjectMask);
-  }, [simOutput, meteringWeights, aePriorities.epsilonShadow, scene?.subjectMask]);
-
-  // Luminance for histogram
-  const luminance = useMemo(() => {
+  // Luminance from simulated output (post-edit)
+  const outputLuminance = useMemo(() => {
     if (!simOutput?.image || !meteringWeights) return undefined;
     return computeWeightedLuminance(simOutput.image, meteringWeights);
   }, [simOutput, meteringWeights]);
+
+  // Compute telemetry from simulated output
+  const telemetry = useMemo(() => {
+    if (!outputLuminance || !meteringWeights) return null;
+    return computeTelemetry(outputLuminance, meteringWeights, aePriorities.epsilonShadow, scene?.subjectMask);
+  }, [outputLuminance, meteringWeights, aePriorities.epsilonShadow, scene?.subjectMask]);
 
   // Calculate consistent display width for both canvases
   const canvasDisplayWidth = useMemo(() => {
@@ -289,7 +322,11 @@ export default function Lab() {
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 mt-6">
             {/* Left: Telemetry + Camera settings */}
             <div className="lg:col-span-3 space-y-6">
-              <TelemetryPanel telemetry={telemetry} luminance={luminance} />
+              <TelemetryPanel
+                telemetry={telemetry}
+                sceneLuminance={sceneLuminance}
+                outputLuminance={outputLuminance}
+              />
 
               <ManualModePanel
                 settings={mode === 'ae' && allocatedSettings ? allocatedSettings : manualSettings}
@@ -297,6 +334,8 @@ export default function Lab() {
                 exposureMetadata={scene?.exposureMetadata}
                 mode={mode}
                 onModeChange={(value) => setMode(value)}
+                programMode={programMode}
+                onProgramModeChange={setProgramMode}
               />
             </div>
 
@@ -366,6 +405,7 @@ export default function Lab() {
               baseEV={lastBaseEV}
               targetEV={lastTargetEV}
               clampedTargetEV={lastClampedTargetEV}
+              programMode={programMode}
             />
           </TabsContent>
         </Tabs>

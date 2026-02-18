@@ -43,6 +43,21 @@ const BASE_SHUTTER = 1 / 60;
 const BASE_APERTURE = 2.8;
 const BASE_ISO = 100;
 
+type EVBreakdown = NonNullable<AllocationLog['evBreakdown']>;
+
+export function computeEVBreakdownFromSettings(settings: CameraSettings): EVBreakdown {
+  const shutterEV = Math.log2(settings.shutterSeconds / BASE_SHUTTER);
+  const apertureEV =
+    Math.log2(BASE_APERTURE / settings.aperture) / Math.log2(Math.sqrt(2));
+  const isoEV = Math.log2(settings.iso / BASE_ISO);
+  return {
+    shutterEV,
+    apertureEV,
+    isoEV,
+    totalEV: shutterEV + apertureEV + isoEV,
+  };
+}
+
 // Convert EV to shutter speed (in seconds). Higher EV = more exposure = longer shutter.
 function evToShutter(ev: number, baseShutter: number = BASE_SHUTTER): number {
   return baseShutter * Math.pow(2, ev);
@@ -210,16 +225,17 @@ export function allocateSettings(
   const safeIso = Math.max(ISO_MIN, clampFinite(iso, ISO_MIN, constraints.isoMax));
 
   // Populate EV breakdown in log if we have finite values
-  if (Number.isFinite(quantizedEV) && Number.isFinite(safeShutter) && Number.isFinite(safeAperture) && Number.isFinite(safeIso)) {
-    const shutterEVFinal = Math.log2(safeShutter / BASE_SHUTTER);
-    const apertureEVFinal = Math.log2(BASE_APERTURE / safeAperture) / Math.log2(Math.sqrt(2));
-    const isoEVFinal = Math.log2(safeIso / BASE_ISO);
-    log.evBreakdown = {
-      shutterEV: shutterEVFinal,
-      apertureEV: apertureEVFinal,
-      isoEV: isoEVFinal,
-      totalEV: shutterEVFinal + apertureEVFinal + isoEVFinal,
-    };
+  if (
+    Number.isFinite(quantizedEV) &&
+    Number.isFinite(safeShutter) &&
+    Number.isFinite(safeAperture) &&
+    Number.isFinite(safeIso)
+  ) {
+    log.evBreakdown = computeEVBreakdownFromSettings({
+      shutterSeconds: safeShutter,
+      aperture: safeAperture,
+      iso: safeIso,
+    });
   }
 
   return {

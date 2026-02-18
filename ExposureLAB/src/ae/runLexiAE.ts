@@ -279,9 +279,8 @@ export function runLexiAE(
   const histBins = 64;
 
   // Manipulated histogram at reference exposure (EV=0) for the Step 1 explainer.
-  // For this visualization we want the shape to match the telemetry histogram,
-  // so we stretch the *used* luminance range to fill [histMinRef, histMaxRef]
-  // instead of hard-coding [0, 1] as in the AE sweep.
+  // Here we dynamically stretch the *used* luminance range so the histogram
+  // always fills the x-axis, matching the user's mental model of "fit everything".
   const binsAtZero = new Array(histBins).fill(0);
   let histMinRef = Infinity;
   let histMaxRef = -Infinity;
@@ -301,7 +300,7 @@ export function runLexiAE(
     const w = algoWeights[i];
     if (w <= 0) continue;
     const v = baseLuminance[i];
-    const normalized = (v - histMinRef) / rangeRef;
+    const normalized = (v - histMinRef) / rangeRef; // 0–1 over used range
     const clamped = Math.max(0, Math.min(1, normalized));
     const bin = Math.floor(clamped * (histBins - 1));
     binsAtZero[bin] += w;

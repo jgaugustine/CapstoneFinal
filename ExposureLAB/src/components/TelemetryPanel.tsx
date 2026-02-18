@@ -4,51 +4,36 @@ import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Tooltip } from 'recha
 
 interface TelemetryPanelProps {
   telemetry: Telemetry | null;
-  luminance?: Float32Array;
+  sceneLuminance?: Float32Array;
+  outputLuminance?: Float32Array;
 }
 
-export function TelemetryPanel({ telemetry, luminance }: TelemetryPanelProps) {
-  // Compute histogram data
-  const histogramData = (() => {
+export function TelemetryPanel({ telemetry, sceneLuminance, outputLuminance }: TelemetryPanelProps) {
+  const buildHistogramData = (luminance?: Float32Array) => {
     if (!luminance || luminance.length === 0) return [];
 
     const bins = 64;
     const histogram = new Array(bins).fill(0);
 
-    // For display, stretch the *actual* luminance range to fill [0, 1],
-    // so the histogram always uses the full x-axis even if the image
-    // only occupies a subrange like [0, 0.5]. This is purely visual;
-    // AE math still uses absolute [0, 1] elsewhere.
-    let min = Infinity;
-    let maxVal = -Infinity;
-    for (let i = 0; i < luminance.length; i++) {
-      const v = luminance[i];
-      if (v < min) min = v;
-      if (v > maxVal) maxVal = v;
-    }
-    if (!Number.isFinite(min) || !Number.isFinite(maxVal) || min === maxVal) {
-      return [];
-    }
-    const range = maxVal - min;
-
     for (let i = 0; i < luminance.length; i++) {
       const value = luminance[i];
-      const normalized = (value - min) / range; // 0–1 over actual used range
-      const clamped = Math.max(0, Math.min(1, normalized));
+      const clamped = Math.max(0, Math.min(1, value));
       const bin = Math.floor(clamped * (bins - 1));
       histogram[bin]++;
     }
 
-    // Normalize to 0-1 for display
     const maxCount = Math.max(...histogram);
     if (maxCount === 0) return [];
 
     return histogram.map((count, index) => ({
       bin: index,
       value: count / maxCount,
-      luminance: index / bins, // 0–1 over stretched display range
+      luminance: index / bins,
     }));
-  })();
+  };
+
+  const sceneHist = buildHistogramData(sceneLuminance);
+  const outputHist = buildHistogramData(outputLuminance);
 
   if (!telemetry) {
     return (
@@ -116,25 +101,50 @@ export function TelemetryPanel({ telemetry, luminance }: TelemetryPanelProps) {
           </div>
         )}
 
-        {histogramData.length > 0 && (
-          <div className="pt-4 border-t border-border">
-            <p className="text-sm font-semibold mb-2">Luminance Histogram</p>
-            <ResponsiveContainer width="100%" height={150}>
-              <BarChart data={histogramData}>
-                <XAxis 
-                  dataKey="luminance" 
-                  type="number"
-                  domain={[0, 1]}
-                  tickFormatter={(value) => value.toFixed(1)}
-                />
-                <YAxis hide />
-                <Tooltip 
-                  formatter={(value: number) => value.toFixed(2)}
-                  labelFormatter={(label) => `Luminance: ${label.toFixed(2)}`}
-                />
-                <Bar dataKey="value" fill="hsl(var(--primary))" />
-              </BarChart>
-            </ResponsiveContainer>
+        {(sceneHist.length > 0 || outputHist.length > 0) && (
+          <div className="pt-4 border-t border-border space-y-4">
+            {sceneHist.length > 0 && (
+              <div>
+                <p className="text-sm font-semibold mb-2">Scene luminance (metered image)</p>
+                <ResponsiveContainer width="100%" height={120}>
+                  <BarChart data={sceneHist}>
+                    <XAxis
+                      dataKey="luminance"
+                      type="number"
+                      domain={[0, 1]}
+                      tickFormatter={(value) => value.toFixed(1)}
+                    />
+                    <YAxis hide />
+                    <Tooltip
+                      formatter={(value: number) => value.toFixed(2)}
+                      labelFormatter={(label) => `Luminance: ${label.toFixed(2)}`}
+                    />
+                    <Bar dataKey="value" fill="hsl(var(--primary))" />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            )}
+            {outputHist.length > 0 && (
+              <div>
+                <p className="text-sm font-semibold mb-2">Post-edit luminance (simulated output)</p>
+                <ResponsiveContainer width="100%" height={120}>
+                  <BarChart data={outputHist}>
+                    <XAxis
+                      dataKey="luminance"
+                      type="number"
+                      domain={[0, 1]}
+                      tickFormatter={(value) => value.toFixed(1)}
+                    />
+                    <YAxis hide />
+                    <Tooltip
+                      formatter={(value: number) => value.toFixed(2)}
+                      labelFormatter={(label) => `Luminance: ${label.toFixed(2)}`}
+                    />
+                    <Bar dataKey="value" fill="hsl(var(--primary))" />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            )}
           </div>
         )}
       </CardContent>

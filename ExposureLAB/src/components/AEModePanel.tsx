@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { AEPriorities, AETrace, CameraSettings, AllocationLog, Constraints, AEAlgorithm } from '@/types';
+import type { CameraProgramMode } from '@/components/ManualModePanel';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Slider } from '@/components/ui/slider';
 import { Label } from '@/components/ui/label';
@@ -21,6 +22,7 @@ interface AEModePanelProps {
   baseEV: number | null;
   targetEV: number | null;
   clampedTargetEV: number | null;
+  programMode: CameraProgramMode;
 }
 
 export function AEModePanel({
@@ -36,17 +38,30 @@ export function AEModePanel({
   baseEV,
   targetEV,
   clampedTargetEV,
+  programMode,
 }: AEModePanelProps) {
-  const [showExplainer, setShowExplainer] = useState(false);
+  // Manual mode can toggle the explainer; all other modes always show it.
+  const [showExplainerManual, setShowExplainerManual] = useState(false);
+  const showExplainer = programMode !== 'manual' ? true : showExplainerManual;
 
   const evBreakdown = allocationLog?.evBreakdown;
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle>AE Mode</CardTitle>
+        <CardTitle>
+          {programMode === 'aperture_priority'
+            ? 'Av Mode'
+            : programMode === 'shutter_priority'
+            ? 'Tv Mode'
+            : 'AE Mode'}
+        </CardTitle>
         <CardDescription>
-          Choose a histogram-based AE algorithm that optimizes EV from the metering histogram, then see how that EV is split across shutter speed, aperture, and ISO within your constraints.
+          {programMode === 'aperture_priority'
+            ? 'Choose a histogram-based AE algorithm that optimizes EV from the metering histogram, then split that EV across shutter speed and ISO while honoring your chosen aperture.'
+            : programMode === 'shutter_priority'
+            ? 'Choose a histogram-based AE algorithm that optimizes EV from the metering histogram, then split that EV across aperture and ISO while honoring your chosen shutter speed.'
+            : 'Choose a histogram-based AE algorithm that optimizes EV from the metering histogram, then see how that EV is split across shutter speed, aperture, and ISO within your constraints.'}
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
@@ -161,19 +176,25 @@ export function AEModePanel({
         </div>
         <div className="flex flex-col gap-2 sm:flex-row">
           <Button onClick={onRunAE} className="w-full sm:flex-1">
-            Run Auto-Exposure
+            {programMode === 'aperture_priority'
+              ? 'Run Av exposure'
+              : programMode === 'shutter_priority'
+              ? 'Run Tv exposure'
+              : 'Run Auto-Exposure'}
           </Button>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            className="w-full sm:w-auto"
-            onClick={() => setShowExplainer((prev) => !prev)}
-            disabled={!trace && !allocationLog}
-            title="Show a step-by-step explanation of how AE chose ΔEV and how it was split across shutter, aperture, and ISO."
-          >
-            {showExplainer ? 'Hide explainer' : 'Explain AE & EV'}
-          </Button>
+          {programMode === 'manual' && (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="w-full sm:w-auto"
+              onClick={() => setShowExplainerManual((prev) => !prev)}
+              disabled={!trace && !allocationLog}
+              title="Show a step-by-step explanation of how AE chose ΔEV and how it was split across shutter, aperture, and ISO."
+            >
+              {showExplainer ? 'Hide explainer' : 'Explain AE & EV'}
+            </Button>
+          )}
         </div>
 
         {trace && (
@@ -298,7 +319,7 @@ export function AEModePanel({
                                 <XAxis
                                   dataKey="luminance"
                                   type="number"
-                                  domain={[0, 1]}
+                                  domain={[hMin, hMax]}
                                   tickFormatter={(v) => v.toFixed(2)}
                                   label={{ value: 'Luminance', position: 'insideBottom', offset: -5 }}
                                 />
