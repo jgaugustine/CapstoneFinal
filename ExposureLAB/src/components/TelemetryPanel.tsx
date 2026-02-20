@@ -140,7 +140,7 @@ export function TelemetryPanel({ telemetry, sceneLuminance, outputLuminance }: T
                       formatter={(value: number) => value.toFixed(2)}
                       labelFormatter={(label) => `Luminance: ${label.toFixed(2)}`}
                     />
-                    <Bar dataKey="value" fill="hsl(var(--primary))" />
+                    <Bar dataKey="value" fill="hsl(0, 70%, 50%)" />
                   </BarChart>
                 </ResponsiveContainer>
               </div>
