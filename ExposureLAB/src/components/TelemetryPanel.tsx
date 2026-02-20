@@ -64,11 +64,11 @@ export function TelemetryPanel({ telemetry, sceneLuminance, outputLuminance }: T
             <p className="text-lg font-semibold">{telemetry.median.toFixed(3)}</p>
           </div>
           <div>
-            <p className="text-sm text-muted-foreground">P1</p>
+            <p className="text-sm text-muted-foreground">Lower fence (IQR)</p>
             <p className="text-lg font-semibold">{telemetry.p1.toFixed(3)}</p>
           </div>
           <div>
-            <p className="text-sm text-muted-foreground">P99</p>
+            <p className="text-sm text-muted-foreground">Upper fence (IQR)</p>
             <p className="text-lg font-semibold">{telemetry.p99.toFixed(3)}</p>
           </div>
           <div>

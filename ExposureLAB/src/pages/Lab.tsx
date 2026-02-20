@@ -329,7 +329,11 @@ export default function Lab() {
               />
 
               <ManualModePanel
-                settings={mode === 'ae' && allocatedSettings ? allocatedSettings : manualSettings}
+                settings={
+                  mode === 'ae' && programMode === 'auto_ae' && allocatedSettings
+                    ? allocatedSettings
+                    : manualSettings
+                }
                 onSettingsChange={setManualSettings}
                 exposureMetadata={scene?.exposureMetadata}
                 mode={mode}
@@ -382,6 +386,7 @@ export default function Lab() {
               <ScenePanel
                 scene={scene}
                 onImageUpload={handleImageUpload}
+                onImageRemove={() => setScene(null)}
                 illumination={scene?.illumination ?? 1.0}
                 onIlluminationChange={handleIlluminationChange}
                 onSceneChange={handleSceneChange}
@@ -406,6 +411,7 @@ export default function Lab() {
               targetEV={lastTargetEV}
               clampedTargetEV={lastClampedTargetEV}
               programMode={programMode}
+              scene={scene}
             />
           </TabsContent>
         </Tabs>

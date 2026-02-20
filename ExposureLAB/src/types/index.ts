@@ -123,8 +123,6 @@ export type AETrace = {
   chosenHistogram?: { bins: number[]; min: number; max: number };
   /** Manipulated histogram at EV=0 (reference exposure) so Step 1 matches scene; bins + median at zero */
   manipulatedHistogramAtZero?: { bins: number[]; min: number; max: number; median: number };
-  /** Algorithm weight map for explainer (may be downscaled); 0–1 per pixel, same layout as image */
-  algorithmWeightMap?: { width: number; height: number; data: Float32Array };
 }
 
 export type Telemetry = {

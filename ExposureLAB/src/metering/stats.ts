@@ -86,6 +86,30 @@ export function computePercentiles(
   return results;
 }
 
+/**
+ * Compute outlier bounds using the 1.5*IQR rule:
+ * - Q1 = 25th percentile, Q3 = 75th percentile
+ * - IQR = Q3 - Q1
+ * - Lower fence = Q1 - 1.5 * IQR
+ * - Upper fence = Q3 + 1.5 * IQR
+ * Returns { lower, upper } clamped to [min, max].
+ */
+export function computeIQRBounds(
+  cdf: number[],
+  min: number = 0,
+  max: number = 1
+): { lower: number; upper: number } {
+  const total = cdf[cdf.length - 1];
+  if (total === 0 || !Number.isFinite(total)) {
+    return { lower: min, upper: max };
+  }
+  const [q1, q3] = computePercentiles(cdf, [0.25, 0.75], min, max);
+  const iqr = q3 - q1;
+  const lower = Math.max(min, q1 - 1.5 * iqr);
+  const upper = Math.min(max, q3 + 1.5 * iqr);
+  return { lower, upper };
+}
+
 export function computeClipping(
   luminance: Float32Array,
   weights: WeightMap,
@@ -130,9 +154,9 @@ export function computeTelemetry(
     mean += luminance[i] * weights[i];
   }
   
-  // Compute histogram and percentiles
+  // Compute histogram and IQR-based outlier bounds (1.5*IQR rule)
   const { cdf, min, max } = computeWeightedHistogram(luminance, weights);
-  const [p1, p99] = computePercentiles(cdf, [0.01, 0.99], min, max);
+  const { lower: p1, upper: p99 } = computeIQRBounds(cdf, min, max);
   const median = computePercentiles(cdf, [0.5], min, max)[0];
   
   // Compute clipping

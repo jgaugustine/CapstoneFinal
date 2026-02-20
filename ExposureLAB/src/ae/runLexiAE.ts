@@ -87,41 +87,6 @@ export function runLexiAE(
     }
   }
 
-  // Attach algorithm weight map for explainer (downscale if large to keep trace small).
-  const maxDisplaySide = 256;
-  const w = image.width;
-  const h = image.height;
-  const scale = Math.min(1, maxDisplaySide / Math.max(w, h));
-  const outW = scale < 1 ? Math.max(1, Math.round(w * scale)) : w;
-  const outH = scale < 1 ? Math.max(1, Math.round(h * scale)) : h;
-  const weightMapData = new Float32Array(outW * outH);
-  if (scale >= 1) {
-    weightMapData.set(algoWeights);
-  } else {
-    for (let oy = 0; oy < outH; oy++) {
-      for (let ox = 0; ox < outW; ox++) {
-        const y0 = Math.floor((oy * h) / outH);
-        const y1 = Math.min(h, Math.floor(((oy + 1) * h) / outH));
-        const x0 = Math.floor((ox * w) / outW);
-        const x1 = Math.min(w, Math.floor(((ox + 1) * w) / outW));
-        let sum = 0;
-        let count = 0;
-        for (let y = y0; y < y1; y++) {
-          for (let x = x0; x < x1; x++) {
-            sum += algoWeights[y * w + x];
-            count++;
-          }
-        }
-        weightMapData[oy * outW + ox] = count > 0 ? sum / count : 0;
-      }
-    }
-  }
-  const algorithmWeightMap: AETrace['algorithmWeightMap'] = {
-    width: outW,
-    height: outH,
-    data: weightMapData,
-  };
-
   const algoLabel =
     algorithm === 'global'
       ? 'global'
@@ -211,32 +176,19 @@ export function runLexiAE(
   let chosen: CandidateStats | null = null;
   let chosenReason: string;
   let constraintsRelaxed = false;
+  let traceFeasible: typeof feasible; // feasible set for trace (all for entropy, filtered for others)
 
   if (algorithm === 'entropy') {
-    // Entropy-based AE: among EVs that satisfy clipping tolerances, pick the one
-    // that maximizes entropy. If none exist, gradually relax tolerances by
-    // penalizing over-clipping and still maximize entropy within that penalty.
-    if (feasible.length > 0) {
-      chosen = feasible.reduce((best, c) =>
-        (best.entropy ?? -Infinity) > (c.entropy ?? -Infinity) ? best : c
-      );
-      chosenReason =
-        'ΔEV chosen by maximizing histogram entropy subject to highlight/shadow clipping tolerances (ηh, ηs).';
-    } else {
-      constraintsRelaxed = true;
-      chosen = candidates.reduce((best, c) => {
-        const bestPenalty = penaltyFor(best);
-        const currentPenalty = penaltyFor(c);
-        if (currentPenalty < bestPenalty - 1e-6) return c;
-        if (Math.abs(currentPenalty - bestPenalty) < 1e-6) {
-          return (best.entropy ?? -Infinity) > (c.entropy ?? -Infinity) ? best : c;
-        }
-        return best;
-      });
-      chosenReason =
-        'ΔEV chosen by maximizing histogram entropy while minimizing violation of highlight/shadow clipping tolerances (ηh, ηs).';
-    }
+    // Entropy-based AE: maximize histogram entropy over the full EV sweep. No clipping
+    // constraints—entropy naturally penalizes clipping (saturated/crushed pixels reduce spread).
+    chosen = candidates.reduce((best, c) =>
+      (best.entropy ?? -Infinity) > (c.entropy ?? -Infinity) ? best : c
+    );
+    chosenReason =
+      'ΔEV chosen by maximizing histogram entropy over the full EV sweep (entropy naturally penalizes clipping).';
+    traceFeasible = candidates; // all candidates "feasible" for trace display
   } else {
+    traceFeasible = feasible;
     // Global / semantic / saliency family: among EVs that satisfy clipping
     // tolerances, pick the one whose median is closest to the midtone target.
     if (feasible.length > 0) {
@@ -328,8 +280,9 @@ export function runLexiAE(
   );
 
   // Build AETrace that honestly reflects the sweep and tolerance filtering.
-  const stage1Feasible: number[] = feasible.map((c) => c.ev);
-  const stage2Feasible: number[] = feasible.map((c) => c.ev);
+  const feasibleSet = new Set(traceFeasible);
+  const stage1Feasible: number[] = traceFeasible.map((c) => c.ev);
+  const stage2Feasible: number[] = traceFeasible.map((c) => c.ev);
 
   const traceCandidates: AETrace['candidates'] = candidates.map((c) => ({
     ev: c.ev,
@@ -340,7 +293,7 @@ export function runLexiAE(
     stage:
       c === chosen
         ? 'chosen'
-        : isWithinTolerances(c)
+        : feasibleSet.has(c)
         ? 'stage2_feasible'
         : 'initial',
     entropy: c.entropy,
@@ -377,7 +330,6 @@ export function runLexiAE(
     chosenReason,
     chosenHistogram: { bins: chosenBins, min: histMin, max: histMax },
     manipulatedHistogramAtZero: { bins: binsAtZero, min: histMinRef, max: histMaxRef, median: medianAtZero },
-    algorithmWeightMap,
   };
 
   return { chosenEV, trace };

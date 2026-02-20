@@ -1,5 +1,6 @@
 import { CameraSettings, ExposureMetadata } from '@/types';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { ExposureTriangle } from '@/components/ExposureTriangle';
 import { Button } from '@/components/ui/button';
 import { Slider } from '@/components/ui/slider';
 import { Label } from '@/components/ui/label';
@@ -10,10 +11,10 @@ import {
   SHUTTER_SPEEDS,
   snapToNearest,
 } from '@/utils/cameraSettings';
-import { computeEVBreakdownFromSettings } from '@/allocation/allocateSettings';
 
 // Fallback reference when no EXIF metadata (f/2.8, 1/60s, ISO 100)
 const DEFAULT_REF = { aperture: 2.8, shutterSeconds: 1 / 60, iso: 100 };
+
 function evOffsetFromRef(ref: { aperture: number; shutterSeconds: number; iso: number }): number {
   return Math.log2((ref.aperture * ref.aperture) / (ref.shutterSeconds * (ref.iso / 100)));
 }
@@ -47,10 +48,6 @@ export function ManualModePanel({
   programMode,
   onProgramModeChange,
 }: ManualModePanelProps) {
-  const evOffset = exposureMetadata
-    ? evOffsetFromRef(exposureMetadata)
-    : evOffsetFromRef(DEFAULT_REF);
-
   // Reference EV used for priority/auto modes (match capture brightness when possible)
   const ref = exposureMetadata ?? DEFAULT_REF;
   const evRef = Math.log2(
@@ -154,8 +151,6 @@ export function ManualModePanel({
     return snapToNearest(rawISO, ISO_STOPS, 100, 25600);
   };
 
-  const evBreakdown = computeEVBreakdownFromSettings(settings);
-
   return (
     <Card>
       <CardHeader>
@@ -181,15 +176,41 @@ export function ManualModePanel({
               }
             }}
           >
-            <TabsList className="grid grid-cols-5 w-full">
-              <TabsTrigger value="manual">M</TabsTrigger>
-              <TabsTrigger value="aperture_priority">Av</TabsTrigger>
-              <TabsTrigger value="shutter_priority">Tv</TabsTrigger>
-              <TabsTrigger value="manual_auto_iso">M + Auto ISO</TabsTrigger>
-              <TabsTrigger value="auto_ae">AE</TabsTrigger>
+            <TabsList className="flex flex-wrap gap-2 p-0 h-auto bg-transparent">
+              <TabsTrigger
+                value="manual"
+                className="flex-1 min-w-0 rounded-md border-2 border-border bg-background px-3 py-2 text-sm font-semibold shadow-sm transition-all hover:border-muted-foreground/50 hover:bg-muted/50 data-[state=active]:border-primary data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md"
+              >
+                M
+              </TabsTrigger>
+              <TabsTrigger
+                value="aperture_priority"
+                className="flex-1 min-w-0 rounded-md border-2 border-border bg-background px-3 py-2 text-sm font-semibold shadow-sm transition-all hover:border-muted-foreground/50 hover:bg-muted/50 data-[state=active]:border-primary data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md"
+              >
+                Av
+              </TabsTrigger>
+              <TabsTrigger
+                value="shutter_priority"
+                className="flex-1 min-w-0 rounded-md border-2 border-border bg-background px-3 py-2 text-sm font-semibold shadow-sm transition-all hover:border-muted-foreground/50 hover:bg-muted/50 data-[state=active]:border-primary data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md"
+              >
+                Tv
+              </TabsTrigger>
+              <TabsTrigger
+                value="manual_auto_iso"
+                className="flex-1 min-w-0 whitespace-normal rounded-md border-2 border-border bg-background px-3 py-2 text-sm font-semibold shadow-sm transition-all hover:border-muted-foreground/50 hover:bg-muted/50 data-[state=active]:border-primary data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md"
+              >
+                <span className="block leading-tight text-center">Auto<br />ISO</span>
+              </TabsTrigger>
+              <TabsTrigger
+                value="auto_ae"
+                className="flex-1 min-w-0 rounded-md border-2 border-border bg-background px-3 py-2 text-sm font-semibold shadow-sm transition-all hover:border-muted-foreground/50 hover:bg-muted/50 data-[state=active]:border-primary data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md"
+              >
+                AE
+              </TabsTrigger>
             </TabsList>
           </Tabs>
         </div>
+        <ExposureTriangle settings={settings} className="mt-4 pt-4 border-t border-border" />
       </CardHeader>
       <CardContent className="space-y-6">
         {(programMode === 'manual' ||
@@ -210,7 +231,7 @@ export function ManualModePanel({
             </div>
             <Slider
               id="shutter"
-              disabled={mode === 'ae'}
+              disabled={mode === 'ae' && programMode === 'auto_ae'}
               value={[shutterToSlider(settings.shutterSeconds)]}
               onValueChange={([value]) => {
                 const newShutter = sliderToShutter(value);
@@ -251,7 +272,7 @@ export function ManualModePanel({
             </div>
             <Slider
               id="aperture"
-              disabled={mode === 'ae'}
+              disabled={mode === 'ae' && programMode === 'auto_ae'}
               value={[apertureToSlider(settings.aperture)]}
               onValueChange={([value]) => {
                 const newAperture = sliderToAperture(value);
@@ -293,7 +314,7 @@ export function ManualModePanel({
             </div>
             <Slider
               id="iso"
-              disabled={mode === 'ae'}
+              disabled={mode === 'ae' && programMode === 'auto_ae'}
               value={[isoToSlider(settings.iso)]}
               onValueChange={([value]) => {
                 const newISO = sliderToISO(value);
@@ -322,42 +343,6 @@ export function ManualModePanel({
           </div>
         )}
 
-        <div className="pt-4 border-t border-border space-y-2">
-          <div className="text-sm space-y-1">
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">Exposure Value (EV):</span>
-              <span className="font-mono">
-                {(
-                  Math.log2(
-                    (settings.shutterSeconds * (settings.iso / 100)) /
-                      (settings.aperture * settings.aperture)
-                  ) + evOffset
-                ).toFixed(2)}
-              </span>
-            </div>
-          </div>
-          <div className="text-xs space-y-1">
-            <p className="text-muted-foreground">Current settings EV breakdown</p>
-            <div className="space-y-0.5 font-mono">
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Shutter:</span>
-                <span>{evBreakdown.shutterEV.toFixed(2)} EV</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Aperture:</span>
-                <span>{evBreakdown.apertureEV.toFixed(2)} EV</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">ISO:</span>
-                <span>{evBreakdown.isoEV.toFixed(2)} EV</span>
-              </div>
-              <div className="flex justify-between pt-1 border-t border-border">
-                <span className="text-muted-foreground">Total:</span>
-                <span>{evBreakdown.totalEV.toFixed(2)} EV</span>
-              </div>
-            </div>
-          </div>
-        </div>
       </CardContent>
     </Card>
   );

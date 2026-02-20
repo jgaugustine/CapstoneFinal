@@ -13,6 +13,7 @@ const CANVAS_MIN_HEIGHT = 360;
 interface ScenePanelProps {
   scene: SceneState | null;
   onImageUpload: (event: React.ChangeEvent<HTMLInputElement>) => void;
+  onImageRemove?: () => void;
   illumination: number;
   onIlluminationChange: (value: number) => void;
   onSceneChange: (scene: SceneState) => void;
@@ -22,6 +23,7 @@ interface ScenePanelProps {
 export function ScenePanel({
   scene,
   onImageUpload,
+  onImageRemove,
   illumination,
   onIlluminationChange,
   onSceneChange,
@@ -149,16 +151,29 @@ export function ScenePanel({
             />
           </label>
         ) : (
-          <InteractiveSceneCanvas
-            image={maskedSceneImage}
-            radialMasks={scene.radialMasks}
-            linearMasks={scene.linearMasks}
-            displayWidth={canvasDisplayWidth}
-            showMaskOverlay={showMaskOverlay}
-            onAddRadialMask={handleAddRadialMask}
-            onAddLinearMask={handleAddLinearMask}
-            maskDrawingMode={maskDrawingMode}
-          />
+          <div className="relative">
+            <InteractiveSceneCanvas
+              image={maskedSceneImage}
+              radialMasks={scene.radialMasks}
+              linearMasks={scene.linearMasks}
+              displayWidth={canvasDisplayWidth}
+              showMaskOverlay={showMaskOverlay}
+              onAddRadialMask={handleAddRadialMask}
+              onAddLinearMask={handleAddLinearMask}
+              maskDrawingMode={maskDrawingMode}
+            />
+            {onImageRemove && (
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={onImageRemove}
+                className="absolute top-2 right-2 shadow-md"
+              >
+                <Trash2 className="h-4 w-4 mr-1" />
+                Remove
+              </Button>
+            )}
+          </div>
         )}
 
         {/* Global lighting */}

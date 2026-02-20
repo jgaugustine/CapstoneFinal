@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { AEPriorities, AETrace, CameraSettings, AllocationLog, Constraints, AEAlgorithm } from '@/types';
+import { AEPriorities, AETrace, CameraSettings, AllocationLog, Constraints, AEAlgorithm, SceneState } from '@/types';
 import type { CameraProgramMode } from '@/components/ManualModePanel';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Slider } from '@/components/ui/slider';
@@ -7,7 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { LineChart, Line, XAxis, YAxis, ResponsiveContainer, Tooltip, Legend, ReferenceLine, ReferenceArea, BarChart, Bar, Cell } from 'recharts';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { WeightMapHeatmap } from '@/components/WeightMapHeatmap';
+import { EVFramesGallery } from '@/components/EVFramesGallery';
 
 interface AEModePanelProps {
   priorities: AEPriorities;
@@ -23,6 +23,7 @@ interface AEModePanelProps {
   targetEV: number | null;
   clampedTargetEV: number | null;
   programMode: CameraProgramMode;
+  scene: SceneState | null;
 }
 
 export function AEModePanel({
@@ -39,6 +40,7 @@ export function AEModePanel({
   targetEV,
   clampedTargetEV,
   programMode,
+  scene,
 }: AEModePanelProps) {
   // Manual mode can toggle the explainer; all other modes always show it.
   const [showExplainerManual, setShowExplainerManual] = useState(false);
@@ -96,83 +98,95 @@ export function AEModePanel({
             </p>
           </div>
           
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <Label
-                htmlFor="etaHighlight"
-                title="Maximum fraction of metered pixels the AE is allowed to clip in highlights before it starts relaxing its constraints."
-              >
-                Highlight Tolerance (ηh)
-              </Label>
-              <span className="text-sm font-mono">{priorities.etaHighlight.toFixed(3)}</span>
-            </div>
-            <Slider
-              id="etaHighlight"
-              value={[priorities.etaHighlight * 100]}
-              onValueChange={([value]) => {
-                onPrioritiesChange({
-                  ...priorities,
-                  etaHighlight: value / 100,
-                });
-              }}
-              min={0}
-              max={100}
-              step={1}
-            />
-            <p className="text-xs text-muted-foreground">Maximum allowed highlight clipping percentage</p>
-          </div>
+          {algorithm !== 'entropy' && (
+            <>
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <Label
+                    htmlFor="etaHighlight"
+                    title="Maximum fraction of metered pixels the AE is allowed to clip in highlights before it starts relaxing its constraints."
+                  >
+                    Highlight Tolerance (ηh)
+                  </Label>
+                  <span className="text-sm font-mono">{priorities.etaHighlight.toFixed(3)}</span>
+                </div>
+                <Slider
+                  id="etaHighlight"
+                  value={[priorities.etaHighlight * 100]}
+                  onValueChange={([value]) => {
+                    onPrioritiesChange({
+                      ...priorities,
+                      etaHighlight: value / 100,
+                    });
+                  }}
+                  min={0}
+                  max={100}
+                  step={1}
+                />
+                <p className="text-xs text-muted-foreground">Maximum allowed highlight clipping percentage</p>
+              </div>
 
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <Label
-                htmlFor="etaShadow"
-                title="Maximum fraction of metered pixels the AE is allowed to crush into deep shadows before relaxing its constraints."
-              >
-                Shadow Tolerance (ηs)
-              </Label>
-              <span className="text-sm font-mono">{priorities.etaShadow.toFixed(3)}</span>
-            </div>
-            <Slider
-              id="etaShadow"
-              value={[priorities.etaShadow * 100]}
-              onValueChange={([value]) => {
-                onPrioritiesChange({
-                  ...priorities,
-                  etaShadow: value / 100,
-                });
-              }}
-              min={0}
-              max={100}
-              step={1}
-            />
-            <p className="text-xs text-muted-foreground">Maximum allowed shadow clipping percentage</p>
-          </div>
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <Label
+                    htmlFor="etaShadow"
+                    title="Maximum fraction of metered pixels the AE is allowed to crush into deep shadows before relaxing its constraints."
+                  >
+                    Shadow Tolerance (ηs)
+                  </Label>
+                  <span className="text-sm font-mono">{priorities.etaShadow.toFixed(3)}</span>
+                </div>
+                <Slider
+                  id="etaShadow"
+                  value={[priorities.etaShadow * 100]}
+                  onValueChange={([value]) => {
+                    onPrioritiesChange({
+                      ...priorities,
+                      etaShadow: value / 100,
+                    });
+                  }}
+                  min={0}
+                  max={100}
+                  step={1}
+                />
+                <p className="text-xs text-muted-foreground">Maximum allowed shadow clipping percentage</p>
+              </div>
+            </>
+          )}
 
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <Label
-                htmlFor="midtoneTarget"
-                title="Target median luminance level in the manipulated histogram, often thought of as '18% gray'."
-              >
-                Midtone Target (m)
-              </Label>
-              <span className="text-sm font-mono">{priorities.midtoneTarget.toFixed(3)}</span>
+          {algorithm === 'entropy' && (
+            <p className="text-xs text-muted-foreground italic">
+              Entropy mode has no hyperparameters: it simply picks the EV that maximizes histogram entropy. Clipping is naturally penalized (saturated/crushed pixels reduce entropy).
+            </p>
+          )}
+
+          {algorithm !== 'entropy' && (
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <Label
+                  htmlFor="midtoneTarget"
+                  title="Target median luminance level in the manipulated histogram, often thought of as '18% gray'. Not used by entropy mode."
+                >
+                  Midtone Target (m)
+                </Label>
+                <span className="text-sm font-mono">{priorities.midtoneTarget.toFixed(3)}</span>
+              </div>
+              <Slider
+                id="midtoneTarget"
+                value={[priorities.midtoneTarget * 100]}
+                onValueChange={([value]) => {
+                  onPrioritiesChange({
+                    ...priorities,
+                    midtoneTarget: value / 100,
+                  });
+                }}
+                min={0}
+                max={100}
+                step={1}
+              />
+              <p className="text-xs text-muted-foreground">Target median luminance (global/semantic/saliency only)</p>
             </div>
-            <Slider
-              id="midtoneTarget"
-              value={[priorities.midtoneTarget * 100]}
-              onValueChange={([value]) => {
-                onPrioritiesChange({
-                  ...priorities,
-                  midtoneTarget: value / 100,
-                });
-              }}
-              min={0}
-              max={100}
-              step={1}
-            />
-            <p className="text-xs text-muted-foreground">Target median luminance value</p>
-          </div>
+          )}
         </div>
         <div className="flex flex-col gap-2 sm:flex-row">
           <Button onClick={onRunAE} className="w-full sm:flex-1">
@@ -198,8 +212,10 @@ export function AEModePanel({
         </div>
 
         {trace && (
-          <div className="pt-4 border-t border-border space-y-2">
-            <p className="text-sm font-semibold">Chosen ΔEV</p>
+          <div className="pt-4 border-t border-border space-y-4">
+            <EVFramesGallery scene={scene} trace={trace} />
+            <div className="space-y-2">
+              <p className="text-sm font-semibold">Chosen ΔEV</p>
             <div className="text-sm space-y-1">
               <div className="flex justify-between">
                 <span className="text-muted-foreground">ΔEV:</span>
@@ -210,6 +226,7 @@ export function AEModePanel({
                   {trace.chosenReason}
                 </p>
               )}
+            </div>
             </div>
           </div>
         )}
@@ -252,7 +269,7 @@ export function AEModePanel({
               {algorithm === 'saliency' &&
                 'For this algorithm we use a saliency-weighted histogram (pixels that stand out from the mean get higher weight). Four steps: (1) build the weighted histogram, (2) enforce clipping tolerances, (3) pick the EV that minimizes midtone error, (4) convert ΔEV into camera settings.'}
               {algorithm === 'entropy' &&
-                'For this algorithm we maximize histogram entropy (tone spread) under clipping tolerances; there is no midtone target. Four steps: (1) build the full-frame histogram (saturated excluded), (2) enforce clipping tolerances, (3) pick the EV that maximizes entropy, (4) convert ΔEV into camera settings.'}
+                'For this algorithm we maximize histogram entropy (tone spread) over the full EV sweep—no clipping or midtone constraints; entropy naturally penalizes clipping. Three steps: (1) build the full-frame histogram (saturated excluded), (2) pick the EV that maximizes entropy, (3) convert ΔEV into camera settings.'}
             </p>
             {!trace && (
               <p className="text-xs text-muted-foreground">
@@ -266,43 +283,20 @@ export function AEModePanel({
                       <p className="text-sm font-semibold">Step 1: Build the manipulated histogram</p>
                       <p className="text-xs text-muted-foreground">
                         {algorithm === 'global' &&
-                          'We remove outliers (pixels with luminance ≥ 0.98 are excluded) and use full-frame weighting (all remaining pixels weighted equally). Below is the weight map and the resulting histogram at reference exposure (EV=0). The vertical line is the midtone target m = '}
+                          'We remove outliers (pixels with luminance ≥ 0.98 are excluded) and use full-frame weighting (all remaining pixels weighted equally). Below is the resulting histogram at reference exposure (EV=0). The vertical line is the midtone target m = '}
                         {algorithm === 'semantic' &&
-                          'We remove outliers and apply ROI/subject weights from metering. Below is the weight map and the weighted histogram at EV=0. The vertical line is the midtone target m = '}
+                          'We remove outliers and apply ROI/subject weights from metering. Below is the weighted histogram at EV=0. The vertical line is the midtone target m = '}
                         {algorithm === 'saliency' &&
-                          'We remove outliers and apply saliency weights (higher where luminance deviates from the mean). Below is the saliency weight map and the weighted histogram at EV=0. The vertical line is the midtone target m = '}
+                          'We remove outliers and apply saliency weights (higher where luminance deviates from the mean). Below is the weighted histogram at EV=0. The vertical line is the midtone target m = '}
                         {algorithm === 'entropy' &&
-                          'We remove outliers and use full-frame weighting (saturated excluded). Below is the weight map and the histogram at EV=0. There is no midtone target; in Step 3 we pick the EV that maximizes this histogram\'s entropy. For reference, the midtone target m = '}
+                          'We remove outliers and use full-frame weighting (saturated excluded). Below is the histogram at EV=0. In Step 2 we pick the EV that maximizes this histogram\'s entropy.'}
                         {(algorithm === 'global' || algorithm === 'semantic' || algorithm === 'saliency') && (
                           <>
                             <span className="font-mono">{priorities.midtoneTarget.toFixed(3)}</span>;
                             the median line shows where the scene sits. We choose ΔEV so the median moves toward m.
                           </>
                         )}
-                        {algorithm === 'entropy' && (
-                          <>
-                            <span className="font-mono">{priorities.midtoneTarget.toFixed(3)}</span> (used only for display; entropy mode does not target it).
-                          </>
-                        )}
                       </p>
-                      {trace.algorithmWeightMap && (
-                        <div className="space-y-1">
-                          <p className="text-xs text-muted-foreground font-medium">
-                            {algorithm === 'global' || algorithm === 'entropy'
-                              ? 'Full-frame weighting (brighter = included, dark = saturated excluded)'
-                              : algorithm === 'semantic'
-                              ? 'ROI / subject weight map (brighter = higher weight)'
-                              : 'Saliency weight map (brighter = higher weight)'}
-                          </p>
-                          <WeightMapHeatmap
-                            width={trace.algorithmWeightMap.width}
-                            height={trace.algorithmWeightMap.height}
-                            data={trace.algorithmWeightMap.data}
-                            maxWidth={280}
-                            maxHeight={160}
-                          />
-                        </div>
-                      )}
                       {trace.manipulatedHistogramAtZero && trace.manipulatedHistogramAtZero.bins.length > 0 && (() => {
                         const { bins, min: hMin, max: hMax, median: refMedian } = trace.manipulatedHistogramAtZero;
                         const total = bins.reduce((a, b) => a + b, 0);
@@ -332,12 +326,14 @@ export function AEModePanel({
                                   formatter={(value: number) => [`${(value * 100).toFixed(2)}%`, 'Fraction']}
                                   labelFormatter={(label) => `Luminance: ${Number(label).toFixed(3)}`}
                                 />
-                                <ReferenceLine
-                                  x={priorities.midtoneTarget}
-                                  stroke="hsl(var(--primary))"
-                                  strokeDasharray="3 3"
-                                  label={{ value: 'Target m', position: 'top' }}
-                                />
+                                {algorithm !== 'entropy' && (
+                                  <ReferenceLine
+                                    x={priorities.midtoneTarget}
+                                    stroke="hsl(var(--primary))"
+                                    strokeDasharray="3 3"
+                                    label={{ value: 'Target m', position: 'top' }}
+                                  />
+                                )}
                                 {refMedian != null && (
                                   <ReferenceLine
                                     x={refMedian}
@@ -354,8 +350,8 @@ export function AEModePanel({
                       })()}
                     </div>
 
-                    {/* Step 2: Feasibility (clipping tolerances) */}
-                    {trace.candidates.length > 0 && (
+                    {/* Step 2: Feasibility (clipping tolerances) — not used by entropy */}
+                    {trace.candidates.length > 0 && algorithm !== 'entropy' && (
                       <div className="space-y-2">
                         <p className="text-sm font-semibold">Step 2: Enforce clipping tolerances</p>
                         <p className="text-xs text-muted-foreground">
@@ -460,11 +456,15 @@ export function AEModePanel({
 
                     {/* Step 3: Objective (entropy or midtone error) */}
                     <div className="space-y-2">
-                      <p className="text-sm font-semibold">Step 3: Choose the best EV among feasible</p>
+                      <p className="text-sm font-semibold">
+                        {algorithm === 'entropy'
+                          ? 'Step 2: Maximize entropy over the full EV sweep'
+                          : 'Step 3: Minimize midtone error among feasible EVs'}
+                      </p>
                       {algorithm === 'entropy' && trace.candidates.some((c) => c.entropy != null) ? (
                         <>
                           <p className="text-xs text-muted-foreground">
-                            Among feasible EVs, we pick the one that maximizes histogram entropy (spread of tones).
+                            We pick the EV that maximizes histogram entropy (spread of tones). No clipping constraints—entropy naturally penalizes clipping.
                           </p>
                           <div className="h-[200px]">
                             <ResponsiveContainer width="100%" height="100%">
@@ -488,34 +488,11 @@ export function AEModePanel({
                                   formatter={(value: number) => [value != null ? value.toFixed(3) : '—', 'Entropy']}
                                   labelFormatter={(label) => `EV: ${Number(label).toFixed(2)}`}
                                 />
-                                {(() => {
-                                  const infeasibleIntervals: { x1: number; x2: number }[] = [];
-                                  let blockStart: number | null = null;
-                                  for (let i = 0; i < trace.candidates.length; i++) {
-                                    const c = trace.candidates[i];
-                                    const feasible = c.stage === 'stage2_feasible' || c.stage === 'chosen';
-                                    if (!feasible) {
-                                      if (blockStart === null) blockStart = c.ev;
-                                    } else {
-                                      if (blockStart !== null) {
-                                        infeasibleIntervals.push({ x1: blockStart, x2: trace.candidates[i - 1].ev });
-                                        blockStart = null;
-                                      }
-                                    }
-                                  }
-                                  if (blockStart !== null) {
-                                    const last = trace.candidates[trace.candidates.length - 1];
-                                    infeasibleIntervals.push({ x1: blockStart, x2: last.ev });
-                                  }
-                                  return infeasibleIntervals.map((interval, idx) => (
-                                    <ReferenceArea key={idx} x1={interval.x1} x2={interval.x2} fill="rgba(239, 68, 68, 0.18)" />
-                                  ));
-                                })()}
                                 <ReferenceLine
                                   x={trace.chosenEV}
                                   stroke="hsl(var(--primary))"
                                   strokeDasharray="3 3"
-                                  label="Chosen EV"
+                                  label={{ value: 'Chosen EV (max entropy)', position: 'top' }}
                                 />
                                 <Line
                                   type="monotone"
@@ -528,9 +505,6 @@ export function AEModePanel({
                               </LineChart>
                             </ResponsiveContainer>
                           </div>
-                          <p className="text-xs text-muted-foreground">
-                            Light red = infeasible (exceeds ηh or ηs). Choice is made only among unshaded EVs.
-                          </p>
                         </>
                       ) : (
                         algorithm !== 'entropy' && (
@@ -553,7 +527,7 @@ export function AEModePanel({
                                     tickFormatter={(v) => v.toFixed(1)}
                                     label={{ value: 'EV', position: 'insideBottom', offset: -5 }}
                                   />
-no                                  <YAxis
+                                  <YAxis
                                     yAxisId="error"
                                     orientation="left"
                                     tickFormatter={(v) => v.toFixed(3)}
@@ -608,7 +582,7 @@ no                                  <YAxis
                                     x={trace.chosenEV}
                                     stroke="hsl(var(--primary))"
                                     strokeDasharray="3 3"
-                                    label="Chosen EV"
+                                    label={{ value: 'Chosen EV (min error)', position: 'top' }}
                                   />
                                   <ReferenceLine
                                     yAxisId="median"
