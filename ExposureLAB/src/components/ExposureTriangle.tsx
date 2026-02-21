@@ -1,4 +1,4 @@
-import { CameraSettings } from '@/types';
+fimport { CameraSettings } from '@/types';
 import { settingsToEV, computeEVBreakdownFromSettings } from '@/allocation/allocateSettings';
 
 function formatShutter(seconds: number): string {
