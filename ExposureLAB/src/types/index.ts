@@ -123,6 +123,8 @@ export type AETrace = {
   chosenHistogram?: { bins: number[]; min: number; max: number };
   /** Manipulated histogram at EV=0 (reference exposure) so Step 1 matches scene; bins + median at zero */
   manipulatedHistogramAtZero?: { bins: number[]; min: number; max: number; median: number };
+  /** Saliency map (0–1 grayscale) for saliency algorithm; same dims as metering image */
+  saliencyMap?: { data: Float32Array; width: number; height: number };
 }
 
 export type Telemetry = {

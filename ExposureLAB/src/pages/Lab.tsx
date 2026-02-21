@@ -411,7 +411,8 @@ export default function Lab() {
               targetEV={lastTargetEV}
               clampedTargetEV={lastClampedTargetEV}
               programMode={programMode}
-              scene={scene}
+                scene={scene}
+                meteringMode={meteringMode}
             />
           </TabsContent>
         </Tabs>

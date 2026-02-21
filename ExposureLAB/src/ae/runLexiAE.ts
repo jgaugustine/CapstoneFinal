@@ -34,16 +34,15 @@ export function runLexiAE(
   // candidates so that the EV decision is driven by this manipulated
   // histogram rather than by the raw meter alone.
   const algoWeights = new Float32Array(n);
+  let saliencyMap: { data: Float32Array; width: number; height: number } | undefined;
 
-  if (algorithm === 'global' || algorithm === 'entropy') {
-    // Global / entropy: treat all non-saturated pixels equally (full-frame
-    // histogram). Pixels that are already near saturation are excluded from
-    // the manipulated histogram.
+  if (algorithm === 'global') {
+    // Global: treat all non-saturated pixels equally (full-frame histogram).
     for (let i = 0; i < n; i++) {
       algoWeights[i] = baseLuminance[i] >= satThreshold ? 0 : 1;
     }
-  } else if (algorithm === 'semantic') {
-    // Semantic: rely on the incoming metering weights (e.g. subject mask).
+  } else if (algorithm === 'entropy' || algorithm === 'semantic') {
+    // Entropy / semantic: use metering weights (matrix, center, spot, or subject).
     for (let i = 0; i < n; i++) {
       algoWeights[i] = baseLuminance[i] >= satThreshold ? 0 : weights[i];
     }
@@ -59,17 +58,20 @@ export function runLexiAE(
     }
     const mean = wsum > 0 ? sum / wsum : 0;
     let maxDev = 0;
-    const tmpDev = new Float32Array(n);
+    const saliencyMapData = new Float32Array(n);
     for (let i = 0; i < n; i++) {
       const dev = Math.abs(baseLuminance[i] - mean);
-      tmpDev[i] = dev;
+      saliencyMapData[i] = dev;
       if (dev > maxDev) maxDev = dev;
     }
     const invMaxDev = maxDev > 0 ? 1 / maxDev : 0;
+    const saliencyVis = new Float32Array(n);
     for (let i = 0; i < n; i++) {
-      const sal = tmpDev[i] * invMaxDev; // 0–1
+      const sal = saliencyMapData[i] * invMaxDev; // 0–1
+      saliencyVis[i] = sal;
       algoWeights[i] = baseLuminance[i] >= satThreshold ? 0 : sal * weights[i];
     }
+    saliencyMap = { data: saliencyVis, width: image.width, height: image.height };
   }
 
   // Normalize algorithm-specific weights so that clipping fractions and
@@ -330,6 +332,7 @@ export function runLexiAE(
     chosenReason,
     chosenHistogram: { bins: chosenBins, min: histMin, max: histMax },
     manipulatedHistogramAtZero: { bins: binsAtZero, min: histMinRef, max: histMaxRef, median: medianAtZero },
+    saliencyMap,
   };
 
   return { chosenEV, trace };

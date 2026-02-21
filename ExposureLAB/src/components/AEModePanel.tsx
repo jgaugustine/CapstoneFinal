@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { AEPriorities, AETrace, CameraSettings, AllocationLog, Constraints, AEAlgorithm, SceneState } from '@/types';
+import { AEPriorities, AETrace, CameraSettings, AllocationLog, Constraints, AEAlgorithm, SceneState, MeteringMode } from '@/types';
 import type { CameraProgramMode } from '@/components/ManualModePanel';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Slider } from '@/components/ui/slider';
@@ -24,6 +24,7 @@ interface AEModePanelProps {
   clampedTargetEV: number | null;
   programMode: CameraProgramMode;
   scene: SceneState | null;
+  meteringMode: MeteringMode;
 }
 
 export function AEModePanel({
@@ -41,6 +42,7 @@ export function AEModePanel({
   clampedTargetEV,
   programMode,
   scene,
+  meteringMode,
 }: AEModePanelProps) {
   // Manual mode can toggle the explainer; all other modes always show it.
   const [showExplainerManual, setShowExplainerManual] = useState(false);
@@ -155,9 +157,14 @@ export function AEModePanel({
           )}
 
           {algorithm === 'entropy' && (
-            <p className="text-xs text-muted-foreground italic">
-              Entropy mode has no hyperparameters: it simply picks the EV that maximizes histogram entropy. Clipping is naturally penalized (saturated/crushed pixels reduce entropy).
-            </p>
+            <div className="space-y-1">
+              <p className="text-xs text-muted-foreground">
+                <strong>What is entropy?</strong> Entropy measures how evenly tones are spread across the luminance histogram. Higher entropy means more tonal variety (shadows, midtones, and highlights are all represented). Lower entropy means tones are concentrated in fewer bins—e.g. blown highlights or crushed shadows reduce entropy. We pick the EV that maximizes this spread.
+              </p>
+              <p className="text-xs text-muted-foreground italic">
+                Entropy mode has no hyperparameters. Clipping is naturally penalized (saturated/crushed pixels reduce entropy).
+              </p>
+            </div>
           )}
 
           {algorithm !== 'entropy' && (
@@ -213,7 +220,7 @@ export function AEModePanel({
 
         {trace && (
           <div className="pt-4 border-t border-border space-y-4">
-            <EVFramesGallery scene={scene} trace={trace} />
+            <EVFramesGallery scene={scene} trace={trace} algorithm={algorithm} />
             <div className="space-y-2">
               <p className="text-sm font-semibold">Chosen ΔEV</p>
             <div className="text-sm space-y-1">
@@ -269,7 +276,7 @@ export function AEModePanel({
               {algorithm === 'saliency' &&
                 'For this algorithm we use a saliency-weighted histogram (pixels that stand out from the mean get higher weight). Four steps: (1) build the weighted histogram, (2) enforce clipping tolerances, (3) pick the EV that minimizes midtone error, (4) convert ΔEV into camera settings.'}
               {algorithm === 'entropy' &&
-                'For this algorithm we maximize histogram entropy (tone spread) over the full EV sweep—no clipping or midtone constraints; entropy naturally penalizes clipping. Three steps: (1) build the full-frame histogram (saturated excluded), (2) pick the EV that maximizes entropy, (3) convert ΔEV into camera settings.'}
+                'For this algorithm we maximize histogram entropy (tone spread) over the full EV sweep—no clipping or midtone constraints; entropy naturally penalizes clipping. Three steps: (1) build the metering-weighted histogram (saturated excluded), (2) pick the EV that maximizes entropy, (3) convert ΔEV into camera settings.'}
             </p>
             {!trace && (
               <p className="text-xs text-muted-foreground">
@@ -289,7 +296,13 @@ export function AEModePanel({
                         {algorithm === 'saliency' &&
                           'We remove outliers and apply saliency weights (higher where luminance deviates from the mean). Below is the weighted histogram at EV=0. The vertical line is the midtone target m = '}
                         {algorithm === 'entropy' &&
-                          'We remove outliers and use full-frame weighting (saturated excluded). Below is the histogram at EV=0. In Step 2 we pick the EV that maximizes this histogram\'s entropy.'}
+                          (meteringMode === 'matrix'
+                            ? 'We remove outliers and use full-frame weighting (saturated excluded). Below is the histogram at EV=0. In Step 2 we pick the EV that maximizes this histogram\'s entropy.'
+                            : meteringMode === 'center'
+                            ? 'We remove outliers and use center-weighted metering (saturated excluded). Below is the histogram at EV=0. In Step 2 we pick the EV that maximizes this histogram\'s entropy.'
+                            : meteringMode === 'spot'
+                            ? 'We remove outliers and use spot-weighted metering (saturated excluded). Below is the histogram at EV=0. In Step 2 we pick the EV that maximizes this histogram\'s entropy.'
+                            : 'We remove outliers and use subject/ROI-weighted metering (saturated excluded). Below is the histogram at EV=0. In Step 2 we pick the EV that maximizes this histogram\'s entropy.')}
                         {(algorithm === 'global' || algorithm === 'semantic' || algorithm === 'saliency') && (
                           <>
                             <span className="font-mono">{priorities.midtoneTarget.toFixed(3)}</span>;
@@ -307,9 +320,9 @@ export function AEModePanel({
                           fraction: total > 0 ? count / total : 0,
                         }));
                         return (
-                          <div className="h-[200px]">
+                          <div className="h-[200px] overflow-visible">
                             <ResponsiveContainer width="100%" height="100%">
-                              <BarChart data={histData} margin={{ top: 4, right: 24, bottom: 24, left: 4 }}>
+                              <BarChart data={histData} margin={{ top: 28, right: 24, bottom: 24, left: 50 }}>
                                 <XAxis
                                   dataKey="luminance"
                                   type="number"
@@ -331,7 +344,8 @@ export function AEModePanel({
                                     x={priorities.midtoneTarget}
                                     stroke="hsl(var(--primary))"
                                     strokeDasharray="3 3"
-                                    label={{ value: 'Target m', position: 'top' }}
+                                    label={{ value: 'Target m', position: 'top', fill: 'hsl(var(--primary))' }}
+                                    ifOverflow="visible"
                                   />
                                 )}
                                 {refMedian != null && (
@@ -339,7 +353,8 @@ export function AEModePanel({
                                     x={refMedian}
                                     stroke="hsl(var(--chart-2))"
                                     strokeDasharray="2 2"
-                                    label={{ value: 'Median', position: 'top' }}
+                                    label={{ value: 'Median', position: 'top', fill: 'hsl(var(--chart-2))' }}
+                                    ifOverflow="visible"
                                   />
                                 )}
                                 <Bar dataKey="fraction" fill="hsl(var(--chart-1))" name="Fraction" isAnimationActive={false} />
@@ -368,6 +383,7 @@ export function AEModePanel({
                                 highlightClip: c.highlightClip,
                                 shadowClip: c.shadowClip,
                               }))}
+                              margin={{ top: 4, right: 50, bottom: 24, left: 50 }}
                             >
                               <XAxis
                                 dataKey="ev"
@@ -392,13 +408,13 @@ export function AEModePanel({
                                 y={priorities.etaHighlight}
                                 stroke="hsl(var(--chart-1))"
                                 strokeDasharray="3 3"
-                                label={{ value: 'ηh', position: 'right' }}
+                                label={{ value: 'ηh', position: 'right', fill: 'hsl(var(--chart-1))' }}
                               />
                               <ReferenceLine
                                 y={priorities.etaShadow}
                                 stroke="hsl(var(--chart-2))"
                                 strokeDasharray="3 3"
-                                label={{ value: 'ηs', position: 'right' }}
+                                label={{ value: 'ηs', position: 'right', fill: 'hsl(var(--chart-2))' }}
                               />
                               {(() => {
                                 // Shade feasible EV range in green: candidates that pass clipping
@@ -466,13 +482,14 @@ export function AEModePanel({
                           <p className="text-xs text-muted-foreground">
                             We pick the EV that maximizes histogram entropy (spread of tones). No clipping constraints—entropy naturally penalizes clipping.
                           </p>
-                          <div className="h-[200px]">
+                          <div className="h-[200px] overflow-visible">
                             <ResponsiveContainer width="100%" height="100%">
                               <LineChart
                                 data={trace.candidates.map((c) => ({
                                   ev: c.ev,
                                   entropy: c.entropy ?? undefined,
                                 }))}
+                                margin={{ top: 32, right: 24, bottom: 24, left: 50 }}
                               >
                                 <XAxis
                                   dataKey="ev"
@@ -492,7 +509,8 @@ export function AEModePanel({
                                   x={trace.chosenEV}
                                   stroke="hsl(var(--primary))"
                                   strokeDasharray="3 3"
-                                  label={{ value: 'Chosen EV (max entropy)', position: 'top' }}
+                                  label={{ value: 'Chosen EV (max entropy)', position: 'top', fill: 'hsl(var(--primary))' }}
+                                  ifOverflow="visible"
                                 />
                                 <Line
                                   type="monotone"
@@ -512,7 +530,7 @@ export function AEModePanel({
                             <p className="text-xs text-muted-foreground">
                               Among feasible EVs (those that pass the clipping tolerances in Step 2), we pick the one that minimizes midtone error (median closest to target m). The chosen EV is the minimum of the curve within that feasible band; if it is not the global minimum of the curve, that is because the global minimum lies where highlight or shadow clip would exceed the tolerances.
                             </p>
-                            <div className="h-[200px]">
+                            <div className="h-[200px] overflow-visible">
                               <ResponsiveContainer width="100%" height="100%">
                                 <LineChart
                                   data={trace.candidates.map((c) => ({
@@ -520,6 +538,7 @@ export function AEModePanel({
                                     midtoneError: c.midtoneError,
                                     median: c.median,
                                   }))}
+                                  margin={{ top: 32, right: 60, bottom: 24, left: 50 }}
                                 >
                                   <XAxis
                                     dataKey="ev"
@@ -536,6 +555,7 @@ export function AEModePanel({
                                   <YAxis
                                     yAxisId="median"
                                     orientation="right"
+                                    width={45}
                                     tickFormatter={(v) => v.toFixed(2)}
                                     label={{ value: 'Median', angle: 90, position: 'insideRight' }}
                                   />
@@ -582,14 +602,16 @@ export function AEModePanel({
                                     x={trace.chosenEV}
                                     stroke="hsl(var(--primary))"
                                     strokeDasharray="3 3"
-                                    label={{ value: 'Chosen EV (min error)', position: 'top' }}
+                                    label={{ value: 'Chosen EV (min error)', position: 'top', fill: 'hsl(var(--primary))' }}
+                                    ifOverflow="visible"
                                   />
                                   <ReferenceLine
                                     yAxisId="median"
                                     y={priorities.midtoneTarget}
                                     stroke="hsl(var(--chart-2))"
                                     strokeDasharray="3 3"
-                                    label={{ value: 'Target m', position: 'right' }}
+                                    label={{ value: 'Target m', position: 'right', fill: 'hsl(var(--chart-2))' }}
+                                    ifOverflow="visible"
                                   />
                                   <Line
                                     type="monotone"
@@ -662,10 +684,10 @@ export function AEModePanel({
                                       },
                                     ]}
                                     layout="vertical"
-                                    margin={{ top: 4, right: 24, bottom: 4, left: 4 }}
+                                    margin={{ top: 4, right: 24, bottom: 4, left: 90 }}
                                   >
                                     <XAxis type="number" tickFormatter={(v) => v.toFixed(2)} dataKey="value" />
-                                    <YAxis type="category" dataKey="name" width={70} tick={{ fontSize: 11 }} />
+                                    <YAxis type="category" dataKey="name" width={85} tick={{ fontSize: 11 }} />
                                     <Tooltip formatter={(v: number) => [v.toFixed(3), 'EV']} />
                                     <Bar dataKey="value" radius={[0, 2, 2, 0]} />
                                   </BarChart>
@@ -706,7 +728,7 @@ export function AEModePanel({
                                           { name: 'ISO', ev: 0, fill: 'hsl(var(--chart-3))' },
                                         ]
                                   }
-                                  margin={{ top: 4, right: 24, bottom: 24, left: 4 }}
+                                  margin={{ top: 4, right: 24, bottom: 24, left: 50 }}
                                 >
                                   <XAxis dataKey="name" tick={{ fontSize: 11 }} />
                                   <YAxis tickFormatter={(v) => v.toFixed(2)} label={{ value: 'EV', angle: -90, position: 'insideLeft' }} />
@@ -757,7 +779,7 @@ export function AEModePanel({
                                           : 0.5,
                                       },
                                     ]}
-                                    margin={{ top: 4, right: 24, bottom: 24, left: 4 }}
+                                    margin={{ top: 4, right: 24, bottom: 24, left: 50 }}
                                   >
                                     <XAxis dataKey="name" tick={{ fontSize: 11 }} />
                                     <YAxis domain={[ 0, 1 ]} tickFormatter={(v) => v.toFixed(2)} label={{ value: 'Fraction of range', angle: -90, position: 'insideLeft' }} />
@@ -790,7 +812,7 @@ export function AEModePanel({
                                       { name: 'Aperture', ev: evBreakdown.apertureEV, fill: 'hsl(var(--chart-2))' },
                                       { name: 'ISO', ev: evBreakdown.isoEV, fill: 'hsl(var(--chart-3))' },
                                     ]}
-                                    margin={{ top: 4, right: 24, bottom: 24, left: 4 }}
+                                    margin={{ top: 4, right: 50, bottom: 24, left: 50 }}
                                   >
                                     <XAxis dataKey="name" tick={{ fontSize: 11 }} />
                                     <YAxis tickFormatter={(v) => v.toFixed(2)} label={{ value: 'EV', angle: -90, position: 'insideLeft' }} />
@@ -799,7 +821,7 @@ export function AEModePanel({
                                       y={evBreakdown.totalEV}
                                       stroke="hsl(var(--primary))"
                                       strokeDasharray="3 3"
-                                      label={{ value: 'Total EV', position: 'right' }}
+                                      label={{ value: 'Total EV', position: 'right', fill: 'hsl(var(--primary))' }}
                                     />
                                     <Bar dataKey="ev" radius={[ 2, 2, 0, 0 ]}>
                                       <Cell fill="hsl(var(--chart-1))" />

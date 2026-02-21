@@ -1,5 +1,5 @@
 import { useMemo, useEffect, useRef } from 'react';
-import { AETrace, ImageRGBAFloat, SceneState } from '@/types';
+import { AETrace, ImageRGBAFloat, SceneState, AEAlgorithm } from '@/types';
 import { applyMasksToScene } from '@/utils/masks';
 import { linearToSrgb } from '@/io/loadImage';
 import { Check } from 'lucide-react';
@@ -43,6 +43,38 @@ function downscaleForThumb(
   return { data: out, width: outW, height: outH };
 }
 
+/** Compute saliency map from image: deviation from mean luminance, 0–1 normalized. */
+function computeSaliencyFromImage(image: ImageRGBAFloat): Float32Array {
+  const n = image.width * image.height;
+  const luminance = new Float32Array(n);
+  const satThreshold = 0.98;
+  let sum = 0;
+  let count = 0;
+  for (let i = 0; i < n; i++) {
+    const r = image.data[i * 4];
+    const g = image.data[i * 4 + 1];
+    const b = image.data[i * 4 + 2];
+    const y = 0.2126 * r + 0.7152 * g + 0.0722 * b;
+    luminance[i] = y;
+    if (y < satThreshold) {
+      sum += y;
+      count++;
+    }
+  }
+  const mean = count > 0 ? sum / count : 0;
+  let maxDev = 0;
+  const dev = new Float32Array(n);
+  for (let i = 0; i < n; i++) {
+    const d = Math.abs(luminance[i] - mean);
+    dev[i] = d;
+    if (d > maxDev) maxDev = d;
+  }
+  const invMaxDev = maxDev > 0 ? 1 / maxDev : 0;
+  const saliency = new Float32Array(n);
+  for (let i = 0; i < n; i++) saliency[i] = dev[i] * invMaxDev;
+  return saliency;
+}
+
 /** Scale RGB by 2^ev and clamp to [0,1] */
 function scaleByEV(image: ImageRGBAFloat, ev: number): ImageRGBAFloat {
   const scale = Math.pow(2, ev);
@@ -59,6 +91,8 @@ function scaleByEV(image: ImageRGBAFloat, ev: number): ImageRGBAFloat {
 interface EVFramesGalleryProps {
   scene: SceneState | null;
   trace: AETrace | null;
+  /** AE algorithm (used to show saliency map when 'saliency') */
+  algorithm?: AEAlgorithm;
   /** Display width for each thumbnail */
   thumbSize?: number;
 }
@@ -97,9 +131,11 @@ function sampleCandidates(trace: AETrace): Array<{ ev: number; isChosen: boolean
 export function EVFramesGallery({
   scene,
   trace,
+  algorithm,
   thumbSize = THUMB_MAX_SIZE,
 }: EVFramesGalleryProps) {
   const canvasRefs = useRef<Map<number, HTMLCanvasElement>>(new Map());
+  const saliencyRefs = useRef<Map<number, HTMLCanvasElement>>(new Map());
 
   const { maskedImage, sampled } = useMemo(() => {
     if (!scene?.image || !trace?.candidates.length) {
@@ -118,12 +154,12 @@ export function EVFramesGallery({
 
   const frames = useMemo(() => {
     if (!maskedImage || sampled.length === 0) return [];
-    return sampled.map(({ ev, isChosen }) => ({
-      ev,
-      isChosen,
-      image: scaleByEV(maskedImage, ev),
-    }));
-  }, [maskedImage, sampled]);
+    return sampled.map(({ ev, isChosen }) => {
+      const image = scaleByEV(maskedImage, ev);
+      const saliency = algorithm === 'saliency' ? computeSaliencyFromImage(image) : undefined;
+      return { ev, isChosen, image, saliency, width: image.width, height: image.height };
+    });
+  }, [maskedImage, sampled, algorithm]);
 
   useEffect(() => {
     if (!frames.length) return;
@@ -149,6 +185,32 @@ export function EVFramesGallery({
     });
   }, [frames]);
 
+  useEffect(() => {
+    if (!frames.length) return;
+
+    frames.forEach(({ ev, saliency, width, height }) => {
+      if (!saliency || !width || !height) return;
+      const canvas = saliencyRefs.current.get(ev);
+      if (!canvas) return;
+
+      const ctx = canvas.getContext('2d');
+      if (!ctx) return;
+
+      canvas.width = width;
+      canvas.height = height;
+
+      const imageData = ctx.createImageData(width, height);
+      for (let i = 0; i < saliency.length; i++) {
+        const g = Math.round(saliency[i] * 255);
+        imageData.data[i * 4] = g;
+        imageData.data[i * 4 + 1] = g;
+        imageData.data[i * 4 + 2] = g;
+        imageData.data[i * 4 + 3] = 255;
+      }
+      ctx.putImageData(imageData, 0, 0);
+    });
+  }, [frames]);
+
   if (!trace || frames.length === 0) return null;
 
   return (
@@ -157,8 +219,11 @@ export function EVFramesGallery({
       <p className="text-xs text-muted-foreground">
         Frames at different ΔEV values. The chosen EV by the algorithm is highlighted.
       </p>
-      <div className="flex gap-3 overflow-x-auto pb-2 -mx-1 px-1" style={{ minHeight: thumbSize + 48 }}>
-        {frames.map(({ ev, isChosen }, idx) => (
+      <div
+        className="flex gap-3 overflow-x-auto pb-2 -mx-1 px-1"
+        style={{ minHeight: frames[0]?.saliency ? thumbSize * 2 + 56 : thumbSize + 48 }}
+      >
+        {frames.map(({ ev, isChosen, saliency }, idx) => (
           <div
             key={`${ev.toFixed(2)}-${idx}`}
             className={`flex-shrink-0 flex flex-col items-center gap-1 transition-all ${
@@ -167,6 +232,23 @@ export function EVFramesGallery({
                 : 'opacity-85 hover:opacity-100'
             }`}
           >
+            {saliency && (
+              <div
+                className="relative rounded overflow-hidden border border-border bg-muted flex items-center justify-center"
+                style={{ width: thumbSize, height: thumbSize }}
+                title="Saliency map"
+              >
+                <canvas
+                  ref={(el) => {
+                    if (el) saliencyRefs.current.set(ev, el);
+                  }}
+                  width={maskedImage?.width ?? 0}
+                  height={maskedImage?.height ?? 0}
+                  className="max-w-full max-h-full object-contain"
+                  style={{ maxWidth: thumbSize, maxHeight: thumbSize }}
+                />
+              </div>
+            )}
             <div
               className="relative rounded overflow-hidden border border-border bg-muted flex items-center justify-center"
               style={{ width: thumbSize, height: thumbSize }}
