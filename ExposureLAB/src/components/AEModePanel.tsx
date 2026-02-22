@@ -13,7 +13,7 @@ import {
 import { LineChart, Line, XAxis, YAxis, ResponsiveContainer, Tooltip, Legend, ReferenceLine, ReferenceArea, BarChart, Bar, Cell } from 'recharts';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { EVFramesGallery } from '@/components/EVFramesGallery';
-import { ChevronDown } from 'lucide-react';
+import { ChevronDown, AlertTriangle } from 'lucide-react';
 
 interface AEModePanelProps {
   priorities: AEPriorities;
@@ -98,14 +98,7 @@ export function AEModePanel({
           )}
         </div>
 
-        <Collapsible defaultOpen className="rounded-lg border border-border">
-          <CollapsibleTrigger className="flex w-full items-center justify-between px-4 py-3 text-left font-semibold hover:bg-muted/50 transition-colors rounded-lg [&[data-state=open]>svg]:rotate-180">
-            Auto Exposure
-            <ChevronDown className="h-4 w-4 shrink-0 transition-transform" />
-          </CollapsibleTrigger>
-          <CollapsibleContent>
-            <div className="px-4 pb-4 pt-2 space-y-4 border-t border-border">
-        <div className="space-y-4">
+        <div className="space-y-4 rounded-lg border border-border px-4 py-4">
           <p className="text-sm font-semibold">Auto-exposure algorithm & priorities</p>
 
           <div className="space-y-2">
@@ -135,7 +128,7 @@ export function AEModePanel({
               Global/semantic/saliency build a manipulated luminance histogram and choose the EV whose median is closest to a key midtone value, subject to highlight/shadow clipping tolerances; entropy picks the EV whose manipulated histogram has maximum entropy under the same tolerances.
             </p>
           </div>
-          
+
           {algorithm !== 'entropy' && (
             <>
               <div className="space-y-2">
@@ -232,9 +225,96 @@ export function AEModePanel({
           )}
         </div>
 
+        <Collapsible defaultOpen className="rounded-lg border border-border">
+          <CollapsibleTrigger className="flex w-full items-center justify-between px-4 py-3 text-left font-semibold hover:bg-muted/50 transition-colors rounded-lg [&[data-state=open]>svg]:rotate-180">
+            Auto exposure steps breakdown
+            <ChevronDown className="h-4 w-4 shrink-0 transition-transform" />
+          </CollapsibleTrigger>
+          <CollapsibleContent>
+            <div className="px-4 pb-4 pt-2 space-y-4 border-t border-border">
         {trace && (
           <div className="space-y-4">
             <EVFramesGallery scene={scene} trace={trace} algorithm={algorithm} />
+            {/* Clipping exceeded warning: chosen EV lies outside feasible band */}
+            {algorithm !== 'entropy' &&
+              (trace.relaxCountHighlight > 0 || trace.relaxCountShadow > 0) &&
+              (() => {
+                const chosen = trace.candidates.find((c) => c.stage === 'chosen');
+                if (!chosen) return null;
+                const highlightExceeds = chosen.highlightClip > priorities.etaHighlight;
+                const shadowExceeds = chosen.shadowClip > priorities.etaShadow;
+                return (
+                  <div
+                    className="rounded-lg border border-amber-500/50 bg-amber-500/10 px-4 py-3 text-sm"
+                    role="alert"
+                  >
+                    <div className="flex items-start gap-2">
+                      <AlertTriangle className="h-5 w-5 shrink-0 text-amber-600 dark:text-amber-500 mt-0.5" />
+                      <div className="space-y-2">
+                        <p className="font-semibold text-amber-800 dark:text-amber-200">
+                          Chosen EV exceeds clipping tolerances
+                        </p>
+                        <p className="text-muted-foreground">
+                          No EV in the sweep satisfied both ηh and ηs. The algorithm relaxed constraints and picked the EV
+                          that minimally violates them. At chosen ΔEV {trace.chosenEV >= 0 ? '+' : ''}
+                          {trace.chosenEV.toFixed(2)}, the scene clips more than your current limits allow.
+                        </p>
+                        <div className="space-y-1 pt-1">
+                          <p className="font-medium text-amber-800 dark:text-amber-200">
+                            To bring this EV into the feasible band, relax the parameters:
+                          </p>
+                          <ul className="list-disc list-inside space-y-0.5 text-muted-foreground">
+                            {highlightExceeds && (
+                              <li>
+                                Increase <strong>Highlight Tolerance (ηh)</strong> to at least{' '}
+                                <span className="font-mono">{(chosen.highlightClip * 100).toFixed(1)}%</span> (current ηh:{' '}
+                                <span className="font-mono">{(priorities.etaHighlight * 100).toFixed(1)}%</span>)
+                              </li>
+                            )}
+                            {shadowExceeds && (
+                              <li>
+                                Increase <strong>Shadow Tolerance (ηs)</strong> to at least{' '}
+                                <span className="font-mono">{(chosen.shadowClip * 100).toFixed(1)}%</span> (current ηs:{' '}
+                                <span className="font-mono">{(priorities.etaShadow * 100).toFixed(1)}%</span>)
+                              </li>
+                            )}
+                          </ul>
+                          <p className="text-xs text-muted-foreground pt-1">
+                            Use the sliders above to adjust ηh and ηs, then run auto-exposure again.
+                          </p>
+                        </div>
+                        <div className="flex flex-col gap-2 pt-2 border-t border-amber-500/30 mt-2">
+                          <Label htmlFor="relaxationNorm" className="text-amber-800 dark:text-amber-200">
+                            Norm when relaxing
+                          </Label>
+                          <Select
+                            value={priorities.relaxationNorm ?? 'Linf'}
+                            onValueChange={(value) =>
+                              onPrioritiesChange({
+                                ...priorities,
+                                relaxationNorm: value as 'Linf' | 'L1' | 'L2',
+                              })
+                            }
+                          >
+                            <SelectTrigger id="relaxationNorm" className="w-fit min-w-[140px] bg-background">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="Linf">L∞ (max violation)</SelectItem>
+                              <SelectItem value="L1">L1 (sum of violations)</SelectItem>
+                              <SelectItem value="L2">L2 (Euclidean)</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <p className="text-xs text-muted-foreground">
+                            Choose which norm minimizes violation: L∞ = worst ratio, L1 = sum, L2 = Euclidean. Re-run
+                            auto-exposure to apply.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })()}
             <div className="space-y-2">
               <p className="text-sm font-semibold">Chosen ΔEV</p>
             <div className="text-sm space-y-1">
@@ -361,6 +441,13 @@ export function AEModePanel({
                           <span className="font-mono">{priorities.etaHighlight.toFixed(3)}</span>) and shadow clip ≤ ηs (
                           <span className="font-mono">{priorities.etaShadow.toFixed(3)}</span>). Candidates below the
                           tolerance lines are feasible; the vertical line is the chosen EV.
+                          {(trace.relaxCountHighlight > 0 || trace.relaxCountShadow > 0) && (
+                            <span className="block mt-1 text-amber-700 dark:text-amber-400">
+                              In this run, no EV passed both tolerances, so we relaxed constraints and chose the EV that
+                              minimally violates them. See the warning above for steps to relax ηh/ηs so this EV falls
+                              within the feasible band.
+                            </span>
+                          )}
                         </p>
                         <div className="h-[200px]">
                           <ResponsiveContainer width="100%" height="100%">
@@ -638,7 +725,7 @@ export function AEModePanel({
 
         <Collapsible defaultOpen className="rounded-lg border border-border">
           <CollapsibleTrigger className="flex w-full items-center justify-between px-4 py-3 text-left font-semibold hover:bg-muted/50 transition-colors rounded-lg [&[data-state=open]>svg]:rotate-180">
-            Exposure Allocation
+            Exposure allocation steps breakdown
             <ChevronDown className="h-4 w-4 shrink-0 transition-transform" />
           </CollapsibleTrigger>
           <CollapsibleContent>

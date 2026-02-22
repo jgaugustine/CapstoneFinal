@@ -71,11 +71,15 @@ export type Constraints = {
   quantizationStep: number; // EV steps (e.g., 1/3)
 }
 
+export type RelaxationNorm = 'Linf' | 'L1' | 'L2';
+
 export type AEPriorities = {
   etaHighlight: number; // ηh
   etaShadow: number; // ηs
   epsilonShadow: number;
   midtoneTarget: number; // m
+  /** Norm used when relaxing clipping tolerances (no feasible EV) */
+  relaxationNorm: RelaxationNorm;
 }
 
 export type AERelaxationStep = {

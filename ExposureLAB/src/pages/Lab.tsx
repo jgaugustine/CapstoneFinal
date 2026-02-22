@@ -17,6 +17,7 @@ import { simulateForward } from '@/sim/simulateForward';
 import { runLexiAE } from '@/ae/runLexiAE';
 import {
   allocateSettings,
+  allocateSettingsForSimEVDelta,
   evRangeFromConstraints,
   settingsToEV,
   Preference,
@@ -55,6 +56,7 @@ export default function Lab() {
     etaShadow: 0.05,
     epsilonShadow: 0.01,
     midtoneTarget: 0.18,
+    relaxationNorm: 'Linf',
   });
   const [aeTrace, setAETrace] = useState<AETrace | null>(null);
   const [aeAlgorithm, setAEAlgorithm] = useState<AEAlgorithm>('global');
@@ -142,7 +144,7 @@ export default function Lab() {
   // Run forward simulation (sync)
   const runSimulationSync = useCallback((settings: CameraSettings): SimOutput | null => {
     if (!scene) return null;
-    
+
     // Apply masks to scene image before simulation
     const maskedImage = applyMasksToScene(
       scene.image,
@@ -150,14 +152,14 @@ export default function Lab() {
       scene.radialMasks,
       scene.linearMasks
     );
-    
+
     // Create scene state with masked image for simulation
     const sceneForSim: SceneState = {
       ...scene,
       image: maskedImage,
       illumination: 1.0, // Already applied in masked image
     };
-    
+
     return simulateForward(sceneForSim, settings, simParams);
   }, [scene, simParams]);
 
@@ -198,14 +200,18 @@ export default function Lab() {
         aeAlgorithm
       );
 
-      const baseEV = settingsToEV(manualSettings);
-      const targetEV = baseEV + chosenEV;
-      const clampedTargetEV = Math.max(evRange.min, Math.min(evRange.max, targetEV));
-      const { settings: newSettings, log } = allocateSettings(
-        clampedTargetEV,
+      // Allocation = base (from EXIF metadata) + adjustment (chosenEV).
+      // Base exposure settings come from capture metadata; chosenEV is the delta to apply.
+      const baseSettings = scene.exposureMetadata ?? manualSettings;
+      const baseEV = settingsToEV(baseSettings);
+      const { settings: newSettings, log } = allocateSettingsForSimEVDelta(
+        baseSettings,
+        chosenEV,
         constraints,
         preference
       );
+      const targetEV = baseEV + chosenEV;
+      const clampedTargetEV = Math.max(evRange.min, Math.min(evRange.max, targetEV));
 
       return {
         newSettings,
@@ -294,19 +300,10 @@ export default function Lab() {
     setScene(newScene);
   }, []);
 
-  // Update simulation when manual settings change or scene/illumination/masks change
+  // Update simulation when settings or scene change (always use manualSettings as source of truth)
   useEffect(() => {
-    if (mode === 'manual' && scene) {
-      runSimulationDeferred(manualSettings);
-    }
-  }, [mode, scene, manualSettings, scene?.illumination, scene?.radialMasks, scene?.linearMasks, runSimulationDeferred]);
-
-  // Update simulation when allocated settings change (AE mode)
-  useEffect(() => {
-    if (mode === 'ae' && scene && allocatedSettings) {
-      runSimulationDeferred(allocatedSettings);
-    }
-  }, [mode, scene, allocatedSettings, runSimulationDeferred]);
+    if (scene) runSimulationDeferred(manualSettings);
+  }, [scene, manualSettings, scene?.illumination, scene?.radialMasks, scene?.linearMasks, runSimulationDeferred]);
 
   // Cleanup raf on unmount
   useEffect(() => {
@@ -329,11 +326,7 @@ export default function Lab() {
               />
 
               <ManualModePanel
-                settings={
-                  mode === 'ae' && programMode === 'auto_ae' && allocatedSettings
-                    ? allocatedSettings
-                    : manualSettings
-                }
+                settings={manualSettings}
                 onSettingsChange={setManualSettings}
                 exposureMetadata={scene?.exposureMetadata}
                 mode={mode}

@@ -172,7 +172,10 @@ export function runLexiAE(
       maxHighlight > 0 ? c.highlightClip / maxHighlight : c.highlightClip > 0 ? Infinity : 0;
     const shadowRatio =
       maxShadow > 0 ? c.shadowClip / maxShadow : c.shadowClip > 0 ? Infinity : 0;
-    return Math.max(highlightRatio, shadowRatio);
+    const norm = priorities.relaxationNorm ?? 'Linf';
+    if (norm === 'L1') return highlightRatio + shadowRatio;
+    if (norm === 'L2') return Math.sqrt(highlightRatio * highlightRatio + shadowRatio * shadowRatio);
+    return Math.max(highlightRatio, shadowRatio); // Linf
   };
 
   let chosen: CandidateStats | null = null;

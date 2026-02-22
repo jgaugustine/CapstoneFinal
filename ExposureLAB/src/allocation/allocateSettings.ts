@@ -1,6 +1,18 @@
 import { CameraSettings, Constraints, AllocationLog } from '@/types';
+import type { ExposureMetadata } from '@/types';
 
 export type Preference = 'shutter' | 'aperture' | 'iso' | 'balanced';
+
+/**
+ * EV formula that exactly matches simulateForward.ts. Used to ensure allocated
+ * settings produce the same brightness as the EV sweep's chosen frame when run
+ * through the simulation.
+ */
+export function settingsToSimEV(settings: CameraSettings | ExposureMetadata): number {
+  return Math.log2(
+    (settings.shutterSeconds * (settings.iso / 100)) / (settings.aperture * settings.aperture)
+  );
+}
 
 /** Achievable EV range for allocation (no constraint hits). Used to restrict AE candidates. */
 export function evRangeFromConstraints(
@@ -260,6 +272,53 @@ export function settingsToEV(settings: CameraSettings): number {
   const apertureEV = Math.log2(BASE_APERTURE / settings.aperture) / Math.log2(Math.sqrt(2));
   const isoEV = Math.log2(settings.iso / BASE_ISO);
   return shutterEV + apertureEV + isoEV;
+}
+
+/**
+ * Allocate exposure settings as adjustments to the base (typically from EXIF metadata).
+ * Result satisfies simEV(result) - simEV(base) = adjustmentEV, so the simulation
+ * produces the same brightness as the EV sweep's chosen frame.
+ */
+export function allocateSettingsForSimEVDelta(
+  baseSettings: CameraSettings | ExposureMetadata,
+  adjustmentEV: number,
+  constraints: Constraints,
+  preference: Preference = 'balanced'
+): { settings: CameraSettings; log: AllocationLog } {
+  const targetAllocEV = settingsToEV(baseSettings) + adjustmentEV;
+  const evRange = evRangeFromConstraints(constraints, preference);
+  const clampedTarget = Math.max(evRange.min, Math.min(evRange.max, targetAllocEV));
+  const { settings, log } = allocateSettings(clampedTarget, constraints, preference);
+
+  const targetSimEV = settingsToSimEV(baseSettings) + adjustmentEV;
+  const actualSimEV = settingsToSimEV(settings);
+  if (Math.abs(targetSimEV - actualSimEV) < 0.01) return { settings, log };
+
+  // Correct by solving for ISO: (shutter*iso/100)/aperture² = 2^targetSimEV
+  let { shutterSeconds, aperture, iso } = settings;
+  const targetProduct = Math.pow(2, targetSimEV) * aperture * aperture;
+  let solvedISO = (100 * targetProduct) / shutterSeconds;
+  solvedISO = Math.max(ISO_MIN, Math.min(constraints.isoMax, solvedISO));
+  iso = quantizeISO(solvedISO, constraints.isoMax);
+
+  const finalSettings: CameraSettings = {
+    shutterSeconds: clampFinite(shutterSeconds, constraints.shutterMin, constraints.shutterMax),
+    aperture: clampFinite(aperture, constraints.apertureMin, constraints.apertureMax),
+    iso: Math.max(ISO_MIN, clampFinite(iso, ISO_MIN, constraints.isoMax)),
+  };
+
+  if (
+    Number.isFinite(finalSettings.shutterSeconds) &&
+    Number.isFinite(finalSettings.aperture) &&
+    Number.isFinite(finalSettings.iso)
+  ) {
+    log.evBreakdown = computeEVBreakdownFromSettings(finalSettings);
+  }
+
+  return {
+    settings: finalSettings,
+    log,
+  };
 }
 
 function clampFinite(x: number, min: number, max: number): number {
