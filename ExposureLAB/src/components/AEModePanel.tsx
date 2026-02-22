@@ -13,7 +13,7 @@ import {
 import { LineChart, Line, XAxis, YAxis, ResponsiveContainer, Tooltip, Legend, ReferenceLine, ReferenceArea, BarChart, Bar, Cell } from 'recharts';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { EVFramesGallery } from '@/components/EVFramesGallery';
-import { ChevronDown, AlertTriangle } from 'lucide-react';
+import { ChevronDown, AlertTriangle, Check, X } from 'lucide-react';
 
 interface AEModePanelProps {
   priorities: AEPriorities;
@@ -440,25 +440,29 @@ export function AEModePanel({
                           We sweep EV candidates and keep only those whose weighted highlight clip ≤ ηh (
                           <span className="font-mono">{priorities.etaHighlight.toFixed(3)}</span>) and shadow clip ≤ ηs (
                           <span className="font-mono">{priorities.etaShadow.toFixed(3)}</span>). Candidates below the
-                          tolerance lines are feasible; the vertical line is the chosen EV.
+                          tolerance lines are feasible; the vertical line is the chosen EV. Tolerance lines are{' '}
+                          <span className="text-green-600 dark:text-green-400">green</span> when a feasible band exists,{' '}
+                          <span className="text-amber-600 dark:text-amber-400">orange</span> when no EV satisfies both.
                           {(trace.relaxCountHighlight > 0 || trace.relaxCountShadow > 0) && (
                             <span className="block mt-1 text-amber-700 dark:text-amber-400">
                               In this run, no EV passed both tolerances, so we relaxed constraints and chose the EV that
-                              minimally violates them. See the warning above for steps to relax ηh/ηs so this EV falls
-                              within the feasible band.
+                              minimally violates them. Orange lines = your limits; green dashed = relaxed values at the
+                              chosen EV (increase ηh/ηs to those values to bring this EV into the feasible band). See the
+                              warning above for steps.
                             </span>
                           )}
                         </p>
-                        <div className="h-[200px]">
-                          <ResponsiveContainer width="100%" height="100%">
-                            <LineChart
-                              data={trace.candidates.map((c) => ({
-                                ev: c.ev,
-                                highlightClip: c.highlightClip,
-                                shadowClip: c.shadowClip,
-                              }))}
-                              margin={{ top: 4, right: 50, bottom: 24, left: 50 }}
-                            >
+                        <div className="flex flex-col">
+                          <div className="h-[200px]">
+                            <ResponsiveContainer width="100%" height="100%">
+                              <LineChart
+                                data={trace.candidates.map((c) => ({
+                                  ev: c.ev,
+                                  highlightClip: c.highlightClip,
+                                  shadowClip: c.shadowClip,
+                                }))}
+                                margin={{ top: 4, right: 24, bottom: 24, left: 50 }}
+                              >
                               <XAxis
                                 dataKey="ev"
                                 type="number"
@@ -471,25 +475,97 @@ export function AEModePanel({
                                 label={{ value: 'Clip fraction', angle: -90, position: 'insideLeft' }}
                               />
                               <Tooltip
-                                formatter={(value: number, name: string) => [
-                                  `${(value * 100).toFixed(2)}%`,
-                                  name === 'highlightClip' ? 'Highlight clip' : 'Shadow clip',
-                                ]}
-                                labelFormatter={(label) => `EV: ${Number(label).toFixed(2)}`}
+                                content={({ active, payload, label }) => {
+                                  if (!active || !payload?.length || label == null) return null;
+                                  const row = payload[0]?.payload as { ev: number; highlightClip: number; shadowClip: number } | undefined;
+                                  if (!row) return null;
+                                  const { etaHighlight, etaShadow } = priorities;
+                                  const withinHighlight = etaHighlight <= 0 ? row.highlightClip === 0 : row.highlightClip <= etaHighlight;
+                                  const withinShadow = etaShadow <= 0 ? row.shadowClip === 0 : row.shadowClip <= etaShadow;
+                                  const feasible = withinHighlight && withinShadow;
+                                  const highlightVal = payload.find((p) => p.dataKey === 'highlightClip')?.value as number | undefined;
+                                  const shadowVal = payload.find((p) => p.dataKey === 'shadowClip')?.value as number | undefined;
+                                  return (
+                                    <div className="rounded-md border border-border bg-background px-3 py-2 shadow-md">
+                                      <p className="font-medium">EV: {(row.ev >= 0 ? '+' : '') + row.ev.toFixed(2)}</p>
+                                      <p className="text-xs text-muted-foreground flex items-center gap-1">
+                                        Highlight: {highlightVal != null ? (highlightVal * 100).toFixed(2) : '—'}%
+                                        {withinHighlight ? <Check className="h-3.5 w-3.5 shrink-0 text-green-600" /> : <X className="h-3.5 w-3.5 shrink-0 text-red-600" />}
+                                      </p>
+                                      <p className="text-xs text-muted-foreground flex items-center gap-1">
+                                        Shadow: {shadowVal != null ? (shadowVal * 100).toFixed(2) : '—'}%
+                                        {withinShadow ? <Check className="h-3.5 w-3.5 shrink-0 text-green-600" /> : <X className="h-3.5 w-3.5 shrink-0 text-red-600" />}
+                                      </p>
+                                      <p className="mt-1 text-xs font-medium flex items-center gap-1">
+                                        Constraints: {feasible ? <><Check className="h-3.5 w-3.5 shrink-0 text-green-600" /> Satisfied</> : <><X className="h-3.5 w-3.5 shrink-0 text-red-600" /> Exceeded</>}
+                                      </p>
+                                    </div>
+                                  );
+                                }}
                               />
-                              <Legend />
-                              <ReferenceLine
-                                y={priorities.etaHighlight}
-                                stroke="hsl(var(--chart-1))"
-                                strokeDasharray="3 3"
-                                label={{ value: 'ηh', position: 'right', fill: 'hsl(var(--chart-1))' }}
-                              />
-                              <ReferenceLine
-                                y={priorities.etaShadow}
-                                stroke="hsl(var(--chart-2))"
-                                strokeDasharray="3 3"
-                                label={{ value: 'ηs', position: 'right', fill: 'hsl(var(--chart-2))' }}
-                              />
+                              <Legend verticalAlign="bottom" />
+                              {(() => {
+                                const relaxed =
+                                  trace.relaxCountHighlight > 0 || trace.relaxCountShadow > 0;
+                                const strokeColor = relaxed
+                                  ? 'rgb(217, 119, 6)' // amber-600
+                                  : 'rgb(34, 197, 94)'; // green-500
+                                const greenColor = 'rgb(34, 197, 94)'; // green-500
+                                const sameTolerance =
+                                  Math.abs(priorities.etaHighlight - priorities.etaShadow) < 1e-9;
+                                const chosen = trace.candidates.find((c) => c.stage === 'chosen');
+                                const sameRelaxed =
+                                  chosen &&
+                                  Math.abs(chosen.highlightClip - chosen.shadowClip) < 1e-9;
+                                return (
+                                  <>
+                                    {/* Tolerance lines (orange when relaxed, green when feasible) */}
+                                    {sameTolerance ? (
+                                      <ReferenceLine
+                                        y={priorities.etaHighlight}
+                                        stroke={strokeColor}
+                                        strokeDasharray="4 4"
+                                      />
+                                    ) : (
+                                      <>
+                                        <ReferenceLine
+                                          y={priorities.etaHighlight}
+                                          stroke={strokeColor}
+                                          strokeDasharray="6 3"
+                                        />
+                                        <ReferenceLine
+                                          y={priorities.etaShadow}
+                                          stroke={strokeColor}
+                                          strokeDasharray="2 3"
+                                        />
+                                      </>
+                                    )}
+                                    {/* Relaxed constraint lines (green): min ηh/ηs for chosen EV to be feasible */}
+                                    {relaxed && chosen && (
+                                      sameRelaxed ? (
+                                        <ReferenceLine
+                                          y={chosen.highlightClip}
+                                          stroke={greenColor}
+                                          strokeDasharray="4 4"
+                                        />
+                                      ) : (
+                                        <>
+                                          <ReferenceLine
+                                            y={chosen.highlightClip}
+                                            stroke={greenColor}
+                                            strokeDasharray="6 3"
+                                          />
+                                          <ReferenceLine
+                                            y={chosen.shadowClip}
+                                            stroke={greenColor}
+                                            strokeDasharray="2 3"
+                                          />
+                                        </>
+                                      )
+                                    )}
+                                  </>
+                                );
+                              })()}
                               {(() => {
                                 // Shade feasible EV range in green: candidates that pass clipping
                                 // tolerances (stage2_feasible or chosen).
@@ -540,6 +616,90 @@ export function AEModePanel({
                               />
                             </LineChart>
                           </ResponsiveContainer>
+                          </div>
+                          {(() => {
+                            const relaxed =
+                              trace.relaxCountHighlight > 0 || trace.relaxCountShadow > 0;
+                            const strokeColor = relaxed
+                              ? 'rgb(217, 119, 6)'
+                              : 'rgb(34, 197, 94)';
+                            const greenColor = 'rgb(34, 197, 94)';
+                            const sameTolerance =
+                              Math.abs(priorities.etaHighlight - priorities.etaShadow) < 1e-9;
+                            const chosen = trace.candidates.find((c) => c.stage === 'chosen');
+                            const sameRelaxed =
+                              chosen &&
+                              Math.abs(chosen.highlightClip - chosen.shadowClip) < 1e-9;
+                            const LineSwatch = ({
+                              stroke,
+                              dash,
+                              label,
+                            }: {
+                              stroke: string;
+                              dash: string;
+                              label: string;
+                            }) => (
+                              <div className="flex items-center gap-1.5">
+                                <svg width={24} height={8} className="shrink-0">
+                                  <line
+                                    x1={0}
+                                    y1={4}
+                                    x2={24}
+                                    y2={4}
+                                    stroke={stroke}
+                                    strokeWidth={1.5}
+                                    strokeDasharray={dash}
+                                  />
+                                </svg>
+                                <span className="text-xs text-muted-foreground">{label}</span>
+                              </div>
+                            );
+                            return (
+                              <div className="flex flex-wrap justify-center items-center gap-x-4 gap-y-1 py-2">
+                                {sameTolerance ? (
+                                  <LineSwatch
+                                    stroke={strokeColor}
+                                    dash="4 4"
+                                    label="ηh = ηs (both highlight & shadow)"
+                                  />
+                                ) : (
+                                  <>
+                                    <LineSwatch
+                                      stroke={strokeColor}
+                                      dash="6 3"
+                                      label="ηh"
+                                    />
+                                    <LineSwatch
+                                      stroke={strokeColor}
+                                      dash="2 3"
+                                      label="ηs"
+                                    />
+                                  </>
+                                )}
+                                {relaxed && chosen &&
+                                  (sameRelaxed ? (
+                                    <LineSwatch
+                                      stroke={greenColor}
+                                      dash="4 4"
+                                      label="relaxed (both)"
+                                    />
+                                  ) : (
+                                    <>
+                                      <LineSwatch
+                                        stroke={greenColor}
+                                        dash="6 3"
+                                        label="ηh relaxed"
+                                      />
+                                      <LineSwatch
+                                        stroke={greenColor}
+                                        dash="2 3"
+                                        label="ηs relaxed"
+                                      />
+                                    </>
+                                  ))}
+                              </div>
+                            );
+                          })()}
                         </div>
                       </div>
                     )}
@@ -612,7 +772,7 @@ export function AEModePanel({
                                     midtoneError: c.midtoneError,
                                     median: c.median,
                                   }))}
-                                  margin={{ top: 32, right: 60, bottom: 24, left: 50 }}
+                                  margin={{ top: 32, right: 80, bottom: 32, left: 70 }}
                                 >
                                   <XAxis
                                     dataKey="ev"
@@ -624,12 +784,13 @@ export function AEModePanel({
                                     yAxisId="error"
                                     orientation="left"
                                     tickFormatter={(v) => v.toFixed(3)}
+                                    width={55}
                                     label={{ value: 'Midtone error', angle: -90, position: 'insideLeft' }}
                                   />
                                   <YAxis
                                     yAxisId="median"
                                     orientation="right"
-                                    width={45}
+                                    width={55}
                                     tickFormatter={(v) => v.toFixed(2)}
                                     label={{ value: 'Median', angle: 90, position: 'insideRight' }}
                                   />
