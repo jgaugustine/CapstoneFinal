@@ -288,7 +288,7 @@ export function runLexiAE(
   for (let i = 0; i < n; i++) {
     scaledLuminanceChosen[i] = baseLuminance[i] * scaleChosen;
   }
-  const { bins: chosenBins, min: histMin, max: histMax } = computeWeightedHistogram(
+  const { bins: chosenBins, min: chosenHistMin, max: chosenHistMax } = computeWeightedHistogram(
     scaledLuminanceChosen,
     algoWeights,
     histBins
@@ -343,7 +343,7 @@ export function runLexiAE(
     relaxationStepsHighlight,
     relaxationStepsShadow,
     chosenReason,
-    chosenHistogram: { bins: chosenBins, min: histMin, max: histMax },
+    chosenHistogram: { bins: chosenBins, min: chosenHistMin, max: chosenHistMax },
     manipulatedHistogramAtZero: { bins: binsAtZero, min: histMinRef, max: histMaxRef, median: medianAtZero },
     saliencyMap,
   };

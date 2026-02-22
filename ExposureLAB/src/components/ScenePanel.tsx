@@ -5,7 +5,7 @@ import { Slider } from '@/components/ui/slider';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { InteractiveSceneCanvas } from '@/components/InteractiveSceneCanvas';
-import { Upload, Plus, Trash2, Circle, Minus } from 'lucide-react';
+import { Upload, Plus, Trash2, Circle, Minus, Loader2 } from 'lucide-react';
 import { applyMasksToScene } from '@/utils/masks';
 
 const CANVAS_MIN_HEIGHT = 360;
@@ -18,6 +18,7 @@ interface ScenePanelProps {
   onIlluminationChange: (value: number) => void;
   onSceneChange: (scene: SceneState) => void;
   canvasDisplayWidth?: number;
+  isUploading?: boolean;
 }
 
 export function ScenePanel({
@@ -28,6 +29,7 @@ export function ScenePanel({
   onIlluminationChange,
   onSceneChange,
   canvasDisplayWidth,
+  isUploading = false,
 }: ScenePanelProps) {
   const radialMasks = scene?.radialMasks || [];
   const linearMasks = scene?.linearMasks || [];
@@ -137,17 +139,25 @@ export function ScenePanel({
 
         {/* Scene photo area: upload when empty, image when loaded */}
         {!scene ? (
-          <label className="flex flex-col items-center justify-center w-full border border-dashed border-border rounded-lg bg-muted cursor-pointer gap-3 py-12 px-6 hover:bg-muted/80 transition-colors"
+          <label
+            className={`flex flex-col items-center justify-center w-full border border-dashed border-border rounded-lg bg-muted gap-3 py-12 px-6 transition-colors ${isUploading ? 'cursor-wait' : 'cursor-pointer hover:bg-muted/80'}`}
             style={{ minHeight: CANVAS_MIN_HEIGHT }}
           >
-            <Upload className="h-10 w-10 text-muted-foreground" />
-            <span className="text-sm font-medium text-foreground">Upload image</span>
+            {isUploading ? (
+              <Loader2 className="h-10 w-10 text-primary animate-spin" aria-hidden />
+            ) : (
+              <Upload className="h-10 w-10 text-muted-foreground" />
+            )}
+            <span className="text-sm font-medium text-foreground">
+              {isUploading ? 'Loading image…' : 'Upload image'}
+            </span>
             <span className="text-xs text-muted-foreground">PNG, JPG, WebP</span>
             <input
               type="file"
               accept="image/*"
               onChange={onImageUpload}
               className="hidden"
+              disabled={isUploading}
             />
           </label>
         ) : (

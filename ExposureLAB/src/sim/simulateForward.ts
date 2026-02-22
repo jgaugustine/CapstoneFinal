@@ -222,7 +222,8 @@ export function simulateForward(
   
   // Step 5: Apply motion blur
   if (simParams.motionEnabled && settings.shutterSeconds > simParams.motionThreshold) {
-    const motionAmount = (settings.shutterSeconds - simParams.motionThreshold) * 10;
+    const sensitivity = simParams.motionSensitivity ?? 10;
+    const motionAmount = (settings.shutterSeconds - simParams.motionThreshold) * sensitivity;
     const direction = simParams.motionDirection || { x: 1, y: 1 }; // Default diagonal
     
     if (simParams.motionDirection) {

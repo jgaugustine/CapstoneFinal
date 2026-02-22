@@ -1,6 +1,6 @@
 # AE & Allocation Flowchart
 
-Two flowcharts, no subgraphs. AE output (chosenEV) feeds into Allocation as target EV.
+Three flowcharts, no subgraphs. AE → Allocation → simulateForward.
 
 **AE (EV selection)**
 
@@ -33,7 +33,8 @@ flowchart TB
     E_PICK[Pick argmax entropy no feasibility check]
     FEAS[Feasible = highlightClip ≤ ηh ∧ shadowClip ≤ ηs]
     EMPTY{Feasible non-empty?}
-    BEST[Pick argmin midtoneError among feasible]
+    FEASIBLE_SET[Feasible set non-empty]
+    BEST[argmin midtoneError]
     RELAX["Relax: single step over all candidates"]
     R1["highlightRatio = clip/ηh shadowRatio = clip/ηs"]
     R2["penalty = L1/L2/L∞ of ratios"]
@@ -45,7 +46,7 @@ flowchart TB
     class IMG,W,P,ALGO,EV_RANGE input
     class LUM,HIST_INIT,IQR,NORM,SWEEP,CANDIDATES,SWEEP_ENTROPY,SWEEP_MID,GLOB,SEM,SAL,CLAMP_EV process
     class ALGO_TYPE,SEL_TYPE,EMPTY decision
-    class E_PICK,FEAS,BEST,CHOSEN process
+    class E_PICK,FEAS,FEASIBLE_SET,BEST,CHOSEN process
     class RELAX,R1,R2,R3 relax
     class OUT output
 
@@ -73,10 +74,11 @@ flowchart TB
     SEL_TYPE -->|global/semantic/saliency| FEAS
     E_PICK --> CHOSEN
     FEAS --> EMPTY
-    EMPTY -->|Yes| BEST
+    EMPTY -->|Yes| FEASIBLE_SET
     EMPTY -->|No| RELAX
+    RELAX --> R1 --> R2 --> R3 --> FEASIBLE_SET
+    FEASIBLE_SET --> BEST
     BEST --> CHOSEN
-    RELAX --> R1 --> R2 --> R3 --> CHOSEN
     CHOSEN --> CLAMP_EV
     EV_RANGE --> CLAMP_EV
     CLAMP_EV --> OUT
@@ -146,6 +148,67 @@ flowchart TB
     SETTINGS --> SIM
 ```
 
+**simulateForward**
+
+```mermaid
+flowchart TB
+    classDef input fill:#e3f2fd,stroke:#1976d2
+    classDef process fill:#e8f5e9,stroke:#388e3c
+    classDef decision fill:#fff3e0,stroke:#f57c00
+    classDef output fill:#f3e5f5,stroke:#7b1fa2
+
+    SCENE[Scene: image illumination subjectMask]
+    SETTINGS_IN[CameraSettings: shutter aperture iso]
+    SIM_PARAMS[SimParams: fullWell readNoise dofStrength motionEnabled motionThreshold motionDirection]
+    ILLUM[Step 1: Apply illumination scalar to RGB]
+    EV_CALC[evCurrent evRef from settings and EXIF]
+    EXP_SCALE[exposureScale = 2^evCurrent - evRef]
+    SCALE_RGB[Scale RGB by exposureScale]
+    VAR[Step 3: variance = fullWell/ISO + readNoise²]
+    ISO_GAIN[isoGain noiseBoost from base ISO]
+    NOISE[Add shot noise + read noise to each pixel]
+    DOF_CHECK{dofStrength > 0?}
+    KERNEL[createGaussianKernel blurSigma from aperture]
+    CONV[applyConvolution subjectMask keeps subject sharp]
+    MOTION_CHECK{motionEnabled and shutter > threshold?}
+    MOTION_DIR{motionDirection?}
+    MOTION_BLUR[applyMotionBlur directional]
+    MOTION_ISO[applyMotionBlur isotropic multi-direction]
+    CLIP_MASKS[Compute highlightClipMask shadowClipMask luminance ≥1 or ≤ε]
+    OUT_SIM[SimOutput: image highlightClipMask shadowClipMask]
+
+    SCENE --> ILLUM
+    SETTINGS_IN --> EV_CALC
+    SETTINGS_IN --> VAR
+    SETTINGS_IN --> NOISE
+    SIM_PARAMS --> VAR
+    SIM_PARAMS --> DOF_CHECK
+    SIM_PARAMS --> MOTION_CHECK
+    ILLUM --> EV_CALC
+    EV_CALC --> EXP_SCALE
+    EXP_SCALE --> SCALE_RGB
+    SCALE_RGB --> VAR
+    VAR --> ISO_GAIN
+    ISO_GAIN --> NOISE
+    NOISE --> DOF_CHECK
+    DOF_CHECK -->|Yes| KERNEL
+    DOF_CHECK -->|No| MOTION_CHECK
+    KERNEL --> CONV
+    CONV --> MOTION_CHECK
+    MOTION_CHECK -->|Yes| MOTION_DIR
+    MOTION_CHECK -->|No| CLIP_MASKS
+    MOTION_DIR -->|directional| MOTION_BLUR
+    MOTION_DIR -->|isotropic| MOTION_ISO
+    MOTION_BLUR --> CLIP_MASKS
+    MOTION_ISO --> CLIP_MASKS
+    CLIP_MASKS --> OUT_SIM
+
+    class SCENE,SETTINGS_IN,SIM_PARAMS input
+    class ILLUM,EV_CALC,EXP_SCALE,SCALE_RGB,VAR,ISO_GAIN,NOISE,KERNEL,CONV,MOTION_BLUR,MOTION_ISO,CLIP_MASKS process
+    class DOF_CHECK,MOTION_CHECK,MOTION_DIR decision
+    class OUT_SIM output
+```
+
 ---
 
 ## Key symbols
@@ -163,4 +226,5 @@ flowchart TB
 
 - **AE (EV):** `src/ae/runLexiAE.ts`
 - **Allocation:** `src/allocation/allocateSettings.ts`
+- **simulateForward:** `src/sim/simulateForward.ts`
 - **Pipeline:** `src/pages/Lab.tsx`

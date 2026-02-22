@@ -13,7 +13,7 @@ import {
 import { LineChart, Line, XAxis, YAxis, ResponsiveContainer, Tooltip, Legend, ReferenceLine, ReferenceArea, BarChart, Bar, Cell } from 'recharts';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { EVFramesGallery } from '@/components/EVFramesGallery';
-import { ChevronDown, AlertTriangle, Check, X } from 'lucide-react';
+import { ChevronDown, AlertTriangle, Check, X, Loader2 } from 'lucide-react';
 
 interface AEModePanelProps {
   priorities: AEPriorities;
@@ -31,6 +31,7 @@ interface AEModePanelProps {
   programMode: CameraProgramMode;
   scene: SceneState | null;
   meteringMode: MeteringMode;
+  isRendering?: boolean;
 }
 
 export function AEModePanel({
@@ -49,6 +50,7 @@ export function AEModePanel({
   programMode,
   scene,
   meteringMode,
+  isRendering = false,
 }: AEModePanelProps) {
   // Manual mode can toggle the explainer; all other modes always show it.
   const [showExplainerManual, setShowExplainerManual] = useState(false);
@@ -77,12 +79,19 @@ export function AEModePanel({
       </CardHeader>
       <CardContent className="space-y-6">
         <div className="flex flex-col gap-2 sm:flex-row">
-          <Button onClick={onRunAE} className="w-full sm:flex-1">
-            {programMode === 'aperture_priority'
-              ? 'Run Av exposure'
-              : programMode === 'shutter_priority'
-              ? 'Run Tv exposure'
-              : 'Run Auto-Exposure'}
+          <Button onClick={onRunAE} className="w-full sm:flex-1" disabled={isRendering}>
+            {isRendering ? (
+              <>
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" aria-hidden />
+                Running…
+              </>
+            ) : (
+              programMode === 'aperture_priority'
+                ? 'Run Av exposure'
+                : programMode === 'shutter_priority'
+                ? 'Run Tv exposure'
+                : 'Run Auto-Exposure'
+            )}
           </Button>
           {programMode === 'manual' && (
             <Button

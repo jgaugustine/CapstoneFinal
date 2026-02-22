@@ -156,6 +156,7 @@ export type SimParams = {
   motionEnabled: boolean;
   motionDirection?: { x: number; y: number };
   motionThreshold: number; // shutter speed threshold
+  motionSensitivity?: number; // multiplier for blur amount (default 10)
 }
 
 export type SimOutput = {

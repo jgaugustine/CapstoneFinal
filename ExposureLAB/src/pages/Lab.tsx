@@ -36,10 +36,12 @@ import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent } from '@/components/ui/tabs';
 import { ImageCanvas } from '@/components/ImageCanvas';
 import { ManualModePanel, CameraProgramMode } from '@/components/ManualModePanel';
+import { SimParamsPanel } from '@/components/SimParamsPanel';
 import { AEModePanel } from '@/components/AEModePanel';
 import { MeteringPanel } from '@/components/MeteringPanel';
 import { TelemetryPanel } from '@/components/TelemetryPanel';
 import { ScenePanel } from '@/components/ScenePanel';
+import { SIM_PRESETS } from '@/constants/simPresets';
 
 export default function Lab() {
   const [scene, setScene] = useState<SceneState | null>(null);
@@ -65,19 +67,14 @@ export default function Lab() {
   const [simOutput, setSimOutput] = useState<SimOutput | null>(null);
   const [showClipping, setShowClipping] = useState(false);
   const [isRendering, setIsRendering] = useState(false);
+  const [isImageUploading, setIsImageUploading] = useState(false);
   const rafIdRef = useRef<number>(0);
   const [lastBaseEV, setLastBaseEV] = useState<number | null>(null);
   const [lastTargetEV, setLastTargetEV] = useState<number | null>(null);
   const [lastClampedTargetEV, setLastClampedTargetEV] = useState<number | null>(null);
 
-  // Simulation parameters
-  const simParams: SimParams = {
-    fullWell: 10000,
-    readNoise: 2.0,
-    dofStrength: 0.1,
-    motionEnabled: false,
-    motionThreshold: 1/30,
-  };
+  // Simulation parameters (default: Handheld general)
+  const [simParams, setSimParams] = useState<SimParams>(() => ({ ...SIM_PRESETS.handheld }));
 
   // Constraints for allocation. When relaxing, we never impose a stricter minimum than the user set.
   const constraints: Constraints = {
@@ -119,6 +116,7 @@ export default function Lab() {
     const file = event.target.files?.[0];
     if (!file) return;
 
+    setIsImageUploading(true);
     try {
       const { image, exposureMetadata } = await loadImage(file);
       setScene({
@@ -139,6 +137,8 @@ export default function Lab() {
     } catch (error) {
       console.error('Failed to load image:', error);
       alert('Failed to load image. Please try another file.');
+    } finally {
+      setIsImageUploading(false);
     }
   }, []);
 
@@ -241,23 +241,28 @@ export default function Lab() {
     return 'balanced';
   };
 
-  // Run AE
+  // Run AE: defer so loading spinner shows immediately while AE + sim run
   const handleRunAE = useCallback(() => {
     const preference = mapProgramModeToPreference(programMode);
-    const result = runAEForTargetEV(preference);
-    if (!result) return;
-
-    const { newSettings, log, trace, baseEV, targetEV, clampedTargetEV } = result;
-
-    setAETrace(trace);
-    setAllocationLog(log);
-    setLastBaseEV(baseEV);
-    setLastTargetEV(targetEV);
-    setLastClampedTargetEV(clampedTargetEV);
-
-    setManualSettings(newSettings);
-    setAllocatedSettings(newSettings);
-    runSimulationDeferred(newSettings);
+    setIsRendering(true);
+    if (rafIdRef.current) cancelAnimationFrame(rafIdRef.current);
+    rafIdRef.current = requestAnimationFrame(() => {
+      rafIdRef.current = 0;
+      const result = runAEForTargetEV(preference);
+      if (!result) {
+        setIsRendering(false);
+        return;
+      }
+      const { newSettings, log, trace, baseEV, targetEV, clampedTargetEV } = result;
+      setAETrace(trace);
+      setAllocationLog(log);
+      setLastBaseEV(baseEV);
+      setLastTargetEV(targetEV);
+      setLastClampedTargetEV(clampedTargetEV);
+      setManualSettings(newSettings);
+      setAllocatedSettings(newSettings);
+      runSimulationDeferred(newSettings);
+    });
   }, [programMode, runAEForTargetEV, runSimulationDeferred]);
 
   // Base (scene) luminance for telemetry/histograms: metering image at EV=0 (masks + illumination applied)
@@ -337,7 +342,7 @@ export default function Lab() {
               />
             </div>
 
-            {/* Center: Metering (top middle) + simulated output */}
+            {/* Center: Metering + simulated output */}
             <div className="lg:col-span-4 space-y-6">
               {/* Metering mode - affects telemetry */}
               <MeteringPanel
@@ -375,7 +380,7 @@ export default function Lab() {
               </Card>
             </div>
 
-            {/* Right: Scene + lighting */}
+            {/* Right: Scene + lighting + Simulation params */}
             <div className="lg:col-span-5 space-y-6">
               <ScenePanel
                 scene={scene}
@@ -385,7 +390,10 @@ export default function Lab() {
                 onIlluminationChange={handleIlluminationChange}
                 onSceneChange={handleSceneChange}
                 canvasDisplayWidth={canvasDisplayWidth}
+                isUploading={isImageUploading}
               />
+
+              <SimParamsPanel simParams={simParams} onSimParamsChange={setSimParams} />
             </div>
           </div>
 
@@ -405,8 +413,9 @@ export default function Lab() {
               targetEV={lastTargetEV}
               clampedTargetEV={lastClampedTargetEV}
               programMode={programMode}
-                scene={scene}
-                meteringMode={meteringMode}
+              scene={scene}
+              meteringMode={meteringMode}
+              isRendering={isRendering}
             />
           </TabsContent>
         </Tabs>
