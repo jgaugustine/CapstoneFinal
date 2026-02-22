@@ -17,7 +17,7 @@ export function MeteringPanel({
       <CardHeader>
         <CardTitle>Metering Mode</CardTitle>
         <CardDescription>
-          Select how the camera meters the scene. This affects telemetry calculations and AE decisions.
+          Select how the camera meters the scene. This affects telemetry and auto-exposure decisions.
         </CardDescription>
       </CardHeader>
       <CardContent>

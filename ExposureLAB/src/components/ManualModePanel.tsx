@@ -157,7 +157,7 @@ export function ManualModePanel({
         <div>
           <CardTitle>Camera Mode</CardTitle>
           <CardDescription>
-            Choose between full manual, aperture/shutter priority, manual with auto ISO, or full AE
+            Choose between full manual, aperture/shutter priority, manual with auto ISO, or full auto exposure
           </CardDescription>
         </div>
         <div className="mt-4">
@@ -205,7 +205,7 @@ export function ManualModePanel({
                 value="auto_ae"
                 className="flex-1 min-w-0 rounded-md border-2 border-border bg-background px-3 py-2 text-sm font-semibold shadow-sm transition-all hover:border-muted-foreground/50 hover:bg-muted/50 data-[state=active]:border-primary data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md"
               >
-                AE
+                Auto Exposure
               </TabsTrigger>
             </TabsList>
           </Tabs>

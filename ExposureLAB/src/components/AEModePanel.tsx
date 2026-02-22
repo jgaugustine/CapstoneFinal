@@ -5,9 +5,15 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Slider } from '@/components/ui/slider';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from '@/components/ui/collapsible';
 import { LineChart, Line, XAxis, YAxis, ResponsiveContainer, Tooltip, Legend, ReferenceLine, ReferenceArea, BarChart, Bar, Cell } from 'recharts';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { EVFramesGallery } from '@/components/EVFramesGallery';
+import { ChevronDown } from 'lucide-react';
 
 interface AEModePanelProps {
   priorities: AEPriorities;
@@ -58,27 +64,57 @@ export function AEModePanel({
             ? 'Av Mode'
             : programMode === 'shutter_priority'
             ? 'Tv Mode'
-            : 'AE Mode'}
+            : 'Auto Exposure Mode'}
         </CardTitle>
         <CardDescription>
           {programMode === 'aperture_priority'
-            ? 'Choose a histogram-based AE algorithm that optimizes EV from the metering histogram, then split that EV across shutter speed and ISO while honoring your chosen aperture.'
+            ? 'Choose a histogram-based auto-exposure algorithm that optimizes EV from the metering histogram, then split that EV across shutter speed and ISO while honoring your chosen aperture.'
             : programMode === 'shutter_priority'
-            ? 'Choose a histogram-based AE algorithm that optimizes EV from the metering histogram, then split that EV across aperture and ISO while honoring your chosen shutter speed.'
-            : 'Choose a histogram-based AE algorithm that optimizes EV from the metering histogram, then see how that EV is split across shutter speed, aperture, and ISO within your constraints.'}
+            ? 'Choose a histogram-based auto-exposure algorithm that optimizes EV from the metering histogram, then split that EV across aperture and ISO while honoring your chosen shutter speed.'
+            : 'Choose a histogram-based auto-exposure algorithm that optimizes EV from the metering histogram, then see how that EV is split across shutter speed, aperture, and ISO within your constraints.'}
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
+        <div className="flex flex-col gap-2 sm:flex-row">
+          <Button onClick={onRunAE} className="w-full sm:flex-1">
+            {programMode === 'aperture_priority'
+              ? 'Run Av exposure'
+              : programMode === 'shutter_priority'
+              ? 'Run Tv exposure'
+              : 'Run Auto-Exposure'}
+          </Button>
+          {programMode === 'manual' && (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="w-full sm:w-auto"
+              onClick={() => setShowExplainerManual((prev) => !prev)}
+              disabled={!trace && !allocationLog}
+              title="Show a step-by-step explanation of how auto exposure chose ΔEV and how it was split across shutter, aperture, and ISO."
+            >
+              {showExplainer ? 'Hide explainer' : 'Explain exposure choice'}
+            </Button>
+          )}
+        </div>
+
+        <Collapsible defaultOpen className="rounded-lg border border-border">
+          <CollapsibleTrigger className="flex w-full items-center justify-between px-4 py-3 text-left font-semibold hover:bg-muted/50 transition-colors rounded-lg [&[data-state=open]>svg]:rotate-180">
+            Auto Exposure
+            <ChevronDown className="h-4 w-4 shrink-0 transition-transform" />
+          </CollapsibleTrigger>
+          <CollapsibleContent>
+            <div className="px-4 pb-4 pt-2 space-y-4 border-t border-border">
         <div className="space-y-4">
-          <p className="text-sm font-semibold">AE Algorithm & Priorities</p>
+          <p className="text-sm font-semibold">Auto-exposure algorithm & priorities</p>
 
           <div className="space-y-2">
             <div className="flex items-center justify-between">
               <Label
                 htmlFor="aeAlgorithm"
-                title="Controls how the metering histogram is interpreted when choosing the target exposure value (EV)."
+                title="Controls how the metering histogram is interpreted when choosing the target exposure value."
               >
-                AE Algorithm
+                Auto-exposure algorithm
               </Label>
             </div>
             <Select
@@ -106,7 +142,7 @@ export function AEModePanel({
                 <div className="flex items-center justify-between">
                   <Label
                     htmlFor="etaHighlight"
-                    title="Maximum fraction of metered pixels the AE is allowed to clip in highlights before it starts relaxing its constraints."
+                    title="Maximum fraction of metered pixels auto exposure is allowed to clip in highlights before it starts relaxing its constraints."
                   >
                     Highlight Tolerance (ηh)
                   </Label>
@@ -132,7 +168,7 @@ export function AEModePanel({
                 <div className="flex items-center justify-between">
                   <Label
                     htmlFor="etaShadow"
-                    title="Maximum fraction of metered pixels the AE is allowed to crush into deep shadows before relaxing its constraints."
+                    title="Maximum fraction of metered pixels auto exposure is allowed to crush into deep shadows before relaxing its constraints."
                   >
                     Shadow Tolerance (ηs)
                   </Label>
@@ -195,31 +231,9 @@ export function AEModePanel({
             </div>
           )}
         </div>
-        <div className="flex flex-col gap-2 sm:flex-row">
-          <Button onClick={onRunAE} className="w-full sm:flex-1">
-            {programMode === 'aperture_priority'
-              ? 'Run Av exposure'
-              : programMode === 'shutter_priority'
-              ? 'Run Tv exposure'
-              : 'Run Auto-Exposure'}
-          </Button>
-          {programMode === 'manual' && (
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              className="w-full sm:w-auto"
-              onClick={() => setShowExplainerManual((prev) => !prev)}
-              disabled={!trace && !allocationLog}
-              title="Show a step-by-step explanation of how AE chose ΔEV and how it was split across shutter, aperture, and ISO."
-            >
-              {showExplainer ? 'Hide explainer' : 'Explain AE & EV'}
-            </Button>
-          )}
-        </div>
 
         {trace && (
-          <div className="pt-4 border-t border-border space-y-4">
+          <div className="space-y-4">
             <EVFramesGallery scene={scene} trace={trace} algorithm={algorithm} />
             <div className="space-y-2">
               <p className="text-sm font-semibold">Chosen ΔEV</p>
@@ -238,45 +252,18 @@ export function AEModePanel({
           </div>
         )}
 
-        {allocatedSettings && (
-          <div className="pt-4 border-t border-border space-y-2">
-            <p className="text-sm font-semibold">Allocated Settings</p>
-            <div className="text-sm space-y-1 font-mono">
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Shutter:</span>
-                <span>
-                  {allocatedSettings.shutterSeconds >= 1
-                    ? `${allocatedSettings.shutterSeconds.toFixed(1)}s`
-                    : `1/${Math.round(1 / allocatedSettings.shutterSeconds)}s`}
-                </span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Aperture:</span>
-                <span>f/{allocatedSettings.aperture.toFixed(1)}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">ISO:</span>
-                <span>{allocatedSettings.iso}</span>
-              </div>
-            </div>
-            <p className="text-xs text-muted-foreground pt-1">
-              Target EV is split across shutter, aperture, and ISO by the allocation optimizer, subject to your constraints.
-            </p>
-          </div>
-        )}
-
         {showExplainer && (
-          <div className="pt-4 border-t border-border space-y-3">
-            <p className="text-sm font-semibold">How AE chose ΔEV and how it became settings</p>
+          <div className="space-y-3 pt-2">
+            <p className="text-sm font-semibold">How auto exposure chose ΔEV</p>
             <p className="text-xs text-muted-foreground">
               {algorithm === 'global' &&
-                'For this algorithm we use a full-frame histogram with no spatial weighting; only saturated pixels (luminance ≥ 0.98) are excluded. Four steps: (1) build the manipulated histogram, (2) enforce clipping tolerances, (3) pick the EV that minimizes midtone error, (4) convert ΔEV into camera settings.'}
+                'For this algorithm we use a full-frame histogram with no spatial weighting; only saturated pixels (luminance ≥ 0.98) are excluded. Three steps: (1) build the manipulated histogram, (2) enforce clipping tolerances, (3) pick the EV that minimizes midtone error.'}
               {algorithm === 'semantic' &&
-                'For this algorithm we use an ROI/subject-weighted histogram from your metering (e.g. subject mask). Four steps: (1) build the weighted histogram, (2) enforce clipping tolerances, (3) pick the EV that minimizes midtone error, (4) convert ΔEV into camera settings.'}
+                'For this algorithm we use an ROI/subject-weighted histogram from your metering (e.g. subject mask). Three steps: (1) build the weighted histogram, (2) enforce clipping tolerances, (3) pick the EV that minimizes midtone error.'}
               {algorithm === 'saliency' &&
-                'For this algorithm we use a saliency-weighted histogram (pixels that stand out from the mean get higher weight). Four steps: (1) build the weighted histogram, (2) enforce clipping tolerances, (3) pick the EV that minimizes midtone error, (4) convert ΔEV into camera settings.'}
+                'For this algorithm we use a saliency-weighted histogram (pixels that stand out from the mean get higher weight). Three steps: (1) build the weighted histogram, (2) enforce clipping tolerances, (3) pick the EV that minimizes midtone error.'}
               {algorithm === 'entropy' &&
-                'For this algorithm we maximize histogram entropy (tone spread) over the full EV sweep—no clipping or midtone constraints; entropy naturally penalizes clipping. Three steps: (1) build the metering-weighted histogram (saturated excluded), (2) pick the EV that maximizes entropy, (3) convert ΔEV into camera settings.'}
+                'For this algorithm we maximize histogram entropy (tone spread) over the full EV sweep—no clipping or midtone constraints; entropy naturally penalizes clipping. Two steps: (1) build the metering-weighted histogram (saturated excluded), (2) pick the EV that maximizes entropy.'}
             </p>
             {!trace && (
               <p className="text-xs text-muted-foreground">
@@ -285,7 +272,7 @@ export function AEModePanel({
             )}
             {trace && (
                   <div className="space-y-6 pt-2">
-                    {/* Step 1: Histogram after outlier removal, at reference exposure (EV=0) so it matches the scene */}
+                    {/* Step 1: Histogram at EV=0 */}
                     <div className="space-y-2">
                       <p className="text-sm font-semibold">Step 1: Build the manipulated histogram</p>
                       <p className="text-xs text-muted-foreground">
@@ -641,8 +628,52 @@ export function AEModePanel({
                         )
                       )}
                     </div>
+                  </div>
+                )}
+              </div>
+            )}
+            </div>
+          </CollapsibleContent>
+        </Collapsible>
 
-                    {/* Step 4: How settings are chosen + allocation algorithm */}
+        <Collapsible defaultOpen className="rounded-lg border border-border">
+          <CollapsibleTrigger className="flex w-full items-center justify-between px-4 py-3 text-left font-semibold hover:bg-muted/50 transition-colors rounded-lg [&[data-state=open]>svg]:rotate-180">
+            Exposure Allocation
+            <ChevronDown className="h-4 w-4 shrink-0 transition-transform" />
+          </CollapsibleTrigger>
+          <CollapsibleContent>
+            <div className="px-4 pb-4 pt-2 space-y-4 border-t border-border">
+        {allocatedSettings && (
+          <div className="space-y-2">
+            <p className="text-sm font-semibold">Allocated Settings</p>
+            <div className="text-sm space-y-1 font-mono">
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Shutter:</span>
+                <span>
+                  {allocatedSettings.shutterSeconds >= 1
+                    ? `${allocatedSettings.shutterSeconds.toFixed(1)}s`
+                    : `1/${Math.round(1 / allocatedSettings.shutterSeconds)}s`}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Aperture:</span>
+                <span>f/{allocatedSettings.aperture.toFixed(1)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">ISO:</span>
+                <span>{allocatedSettings.iso}</span>
+              </div>
+            </div>
+            <p className="text-xs text-muted-foreground pt-1">
+              Target EV is split across shutter, aperture, and ISO by the allocation optimizer, subject to your constraints.
+            </p>
+          </div>
+        )}
+
+        {showExplainer && (
+          <div className="space-y-3 pt-2">
+            <p className="text-sm font-semibold">How ΔEV becomes camera settings</p>
+                    {/* Step 4: Convert ΔEV into settings + allocation steps */}
                     <div className="space-y-6">
                       <div className="space-y-2">
                         <p className="text-sm font-semibold">Step 4: Convert ΔEV into camera settings</p>
@@ -866,10 +897,11 @@ export function AEModePanel({
                         </div>
                       )}
                     </div>
-                  </div>
-                )}
-              </div>
+          </div>
         )}
+            </div>
+          </CollapsibleContent>
+        </Collapsible>
       </CardContent>
     </Card>
   );
