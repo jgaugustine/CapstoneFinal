@@ -55,6 +55,7 @@ export function AEModePanel({
   const showExplainer = programMode !== 'manual' ? true : showExplainerManual;
 
   const evBreakdown = allocationLog?.evBreakdown;
+  const isoMin = constraints.isoMin ?? 100;
 
   return (
     <Card>
@@ -337,13 +338,13 @@ export function AEModePanel({
             <p className="text-sm font-semibold">How auto exposure chose ΔEV</p>
             <p className="text-xs text-muted-foreground">
               {algorithm === 'global' &&
-                'For this algorithm we use a full-frame histogram with no spatial weighting; only saturated pixels (luminance ≥ 0.98) are excluded. Three steps: (1) build the manipulated histogram, (2) enforce clipping tolerances, (3) pick the EV that minimizes midtone error.'}
+                'For this algorithm we use a full-frame histogram with no spatial weighting; outliers are trimmed using the 1.5×IQR rule. Three steps: (1) build the manipulated histogram, (2) enforce clipping tolerances, (3) pick the EV that minimizes midtone error.'}
               {algorithm === 'semantic' &&
                 'For this algorithm we use an ROI/subject-weighted histogram from your metering (e.g. subject mask). Three steps: (1) build the weighted histogram, (2) enforce clipping tolerances, (3) pick the EV that minimizes midtone error.'}
               {algorithm === 'saliency' &&
                 'For this algorithm we use a saliency-weighted histogram (pixels that stand out from the mean get higher weight). Three steps: (1) build the weighted histogram, (2) enforce clipping tolerances, (3) pick the EV that minimizes midtone error.'}
               {algorithm === 'entropy' &&
-                'For this algorithm we maximize histogram entropy (tone spread) over the full EV sweep—no clipping or midtone constraints; entropy naturally penalizes clipping. Two steps: (1) build the metering-weighted histogram (saturated excluded), (2) pick the EV that maximizes entropy.'}
+                'For this algorithm we maximize histogram entropy (tone spread) over the full EV sweep—no clipping or midtone constraints; entropy naturally penalizes clipping. Two steps: (1) build the metering-weighted histogram (outliers trimmed by 1.5×IQR), (2) pick the EV that maximizes entropy.'}
             </p>
             {!trace && (
               <p className="text-xs text-muted-foreground">
@@ -357,19 +358,19 @@ export function AEModePanel({
                       <p className="text-sm font-semibold">Step 1: Build the manipulated histogram</p>
                       <p className="text-xs text-muted-foreground">
                         {algorithm === 'global' &&
-                          'We remove outliers (pixels with luminance ≥ 0.98 are excluded) and use full-frame weighting (all remaining pixels weighted equally). Below is the resulting histogram at reference exposure (EV=0). The vertical line is the midtone target m = '}
+                          'We trim outliers using the 1.5×IQR rule and use full-frame weighting (all remaining pixels weighted equally). Below is the resulting histogram at reference exposure (EV=0). The vertical line is the midtone target m = '}
                         {algorithm === 'semantic' &&
-                          'We remove outliers and apply ROI/subject weights from metering. Below is the weighted histogram at EV=0. The vertical line is the midtone target m = '}
+                          'We trim outliers (1.5×IQR) and apply ROI/subject weights from metering. Below is the weighted histogram at EV=0. The vertical line is the midtone target m = '}
                         {algorithm === 'saliency' &&
-                          'We remove outliers and apply saliency weights (higher where luminance deviates from the mean). Below is the weighted histogram at EV=0. The vertical line is the midtone target m = '}
+                          'We trim outliers (1.5×IQR) and apply saliency weights (higher where luminance deviates from the mean). Below is the weighted histogram at EV=0. The vertical line is the midtone target m = '}
                         {algorithm === 'entropy' &&
                           (meteringMode === 'matrix'
-                            ? 'We remove outliers and use full-frame weighting (saturated excluded). Below is the histogram at EV=0. In Step 2 we pick the EV that maximizes this histogram\'s entropy.'
+                            ? 'We trim outliers (1.5×IQR) and use full-frame weighting. Below is the histogram at EV=0. In Step 2 we pick the EV that maximizes this histogram\'s entropy.'
                             : meteringMode === 'center'
-                            ? 'We remove outliers and use center-weighted metering (saturated excluded). Below is the histogram at EV=0. In Step 2 we pick the EV that maximizes this histogram\'s entropy.'
+                            ? 'We trim outliers (1.5×IQR) and use center-weighted metering. Below is the histogram at EV=0. In Step 2 we pick the EV that maximizes this histogram\'s entropy.'
                             : meteringMode === 'spot'
-                            ? 'We remove outliers and use spot-weighted metering (saturated excluded). Below is the histogram at EV=0. In Step 2 we pick the EV that maximizes this histogram\'s entropy.'
-                            : 'We remove outliers and use subject/ROI-weighted metering (saturated excluded). Below is the histogram at EV=0. In Step 2 we pick the EV that maximizes this histogram\'s entropy.')}
+                            ? 'We trim outliers (1.5×IQR) and use spot-weighted metering. Below is the histogram at EV=0. In Step 2 we pick the EV that maximizes this histogram\'s entropy.'
+                            : 'We trim outliers (1.5×IQR) and use subject/ROI-weighted metering. Below is the histogram at EV=0. In Step 2 we pick the EV that maximizes this histogram\'s entropy.')}
                         {(algorithm === 'global' || algorithm === 'semantic' || algorithm === 'saliency') && (
                           <>
                             <span className="font-mono">{priorities.midtoneTarget.toFixed(3)}</span>;
@@ -395,12 +396,12 @@ export function AEModePanel({
                                   type="number"
                                   domain={[hMin, hMax]}
                                   tickFormatter={(v) => v.toFixed(2)}
-                                  label={{ value: 'Luminance', position: 'insideBottom', offset: -5 }}
+                                  label={{ value: 'Luminance', position: 'insideBottom', offset: 5 }}
                                 />
                                 <YAxis
                                   tickFormatter={(v) => `${(v * 100).toFixed(0)}%`}
                                   domain={[0, yMax]}
-                                  label={{ value: 'Fraction', angle: -90, position: 'insideLeft' }}
+                                  label={{ value: 'Fraction', angle: -90, position: 'insideBottomLeft', offset: -15 }}
                                 />
                                 <Tooltip
                                   formatter={(value: number) => [`${(value * 100).toFixed(2)}%`, 'Fraction']}
@@ -453,7 +454,7 @@ export function AEModePanel({
                           )}
                         </p>
                         <div className="flex flex-col">
-                          <div className="h-[200px]">
+                          <div className="h-[200px] overflow-visible">
                             <ResponsiveContainer width="100%" height="100%">
                               <LineChart
                                 data={trace.candidates.map((c) => ({
@@ -461,44 +462,64 @@ export function AEModePanel({
                                   highlightClip: c.highlightClip,
                                   shadowClip: c.shadowClip,
                                 }))}
-                                margin={{ top: 4, right: 24, bottom: 24, left: 50 }}
+                                margin={{ top: 24, right: 24, bottom: 32, left: 85 }}
                               >
                               <XAxis
                                 dataKey="ev"
                                 type="number"
                                 tickFormatter={(v) => v.toFixed(1)}
-                                label={{ value: 'EV', position: 'insideBottom', offset: -5 }}
+                                label={{ value: 'EV', position: 'insideBottom', offset: 5 }}
                               />
                               <YAxis
                                 tickFormatter={(v) => `${(v * 100).toFixed(0)}%`}
                                 domain={[0, 1]}
-                                label={{ value: 'Clip fraction', angle: -90, position: 'insideLeft' }}
+                                width={65}
+                                tickMargin={8}
+                                label={{ value: 'Clip fraction', angle: -90, position: 'insideBottomLeft', offset: -20 }}
                               />
                               <Tooltip
-                                content={({ active, payload, label }) => {
-                                  if (!active || !payload?.length || label == null) return null;
+                                content={({ active, payload }) => {
+                                  if (!active || !payload?.length) return null;
                                   const row = payload[0]?.payload as { ev: number; highlightClip: number; shadowClip: number } | undefined;
                                   if (!row) return null;
                                   const { etaHighlight, etaShadow } = priorities;
                                   const withinHighlight = etaHighlight <= 0 ? row.highlightClip === 0 : row.highlightClip <= etaHighlight;
                                   const withinShadow = etaShadow <= 0 ? row.shadowClip === 0 : row.shadowClip <= etaShadow;
-                                  const feasible = withinHighlight && withinShadow;
-                                  const highlightVal = payload.find((p) => p.dataKey === 'highlightClip')?.value as number | undefined;
-                                  const shadowVal = payload.find((p) => p.dataKey === 'shadowClip')?.value as number | undefined;
+                                  const relaxed = trace.relaxCountHighlight > 0 || trace.relaxCountShadow > 0;
+                                  const chosen = trace.candidates.find((c) => c.stage === 'chosen');
+                                  const withinRelaxedHighlight = chosen && row.highlightClip <= chosen.highlightClip;
+                                  const withinRelaxedShadow = chosen && row.shadowClip <= chosen.shadowClip;
+                                  const cols = relaxed && chosen ? 3 : 2;
                                   return (
                                     <div className="rounded-md border border-border bg-background px-3 py-2 shadow-md">
-                                      <p className="font-medium">EV: {(row.ev >= 0 ? '+' : '') + row.ev.toFixed(2)}</p>
-                                      <p className="text-xs text-muted-foreground flex items-center gap-1">
-                                        Highlight: {highlightVal != null ? (highlightVal * 100).toFixed(2) : '—'}%
-                                        {withinHighlight ? <Check className="h-3.5 w-3.5 shrink-0 text-green-600" /> : <X className="h-3.5 w-3.5 shrink-0 text-red-600" />}
-                                      </p>
-                                      <p className="text-xs text-muted-foreground flex items-center gap-1">
-                                        Shadow: {shadowVal != null ? (shadowVal * 100).toFixed(2) : '—'}%
-                                        {withinShadow ? <Check className="h-3.5 w-3.5 shrink-0 text-green-600" /> : <X className="h-3.5 w-3.5 shrink-0 text-red-600" />}
-                                      </p>
-                                      <p className="mt-1 text-xs font-medium flex items-center gap-1">
-                                        Constraints: {feasible ? <><Check className="h-3.5 w-3.5 shrink-0 text-green-600" /> Satisfied</> : <><X className="h-3.5 w-3.5 shrink-0 text-red-600" /> Exceeded</>}
-                                      </p>
+                                      <p className="font-medium mb-2">EV: {(row.ev >= 0 ? '+' : '') + row.ev.toFixed(2)}</p>
+                                      <div
+                                        className={`grid gap-x-4 gap-y-1 text-xs ${cols === 3 ? 'grid-cols-[auto_1fr_1fr]' : 'grid-cols-[auto_1fr]'}`}
+                                      >
+                                        <div className="font-medium text-muted-foreground">Clipping</div>
+                                        <div className="font-medium text-muted-foreground">Status</div>
+                                        {cols === 3 && (
+                                          <div className="font-medium text-muted-foreground">Relaxed</div>
+                                        )}
+                                        <div>Highlight: {(row.highlightClip * 100).toFixed(2)}%</div>
+                                        <div className="flex items-center gap-1">
+                                          {withinHighlight ? <Check className="h-3.5 w-3.5 shrink-0 text-green-600" /> : <X className="h-3.5 w-3.5 shrink-0 text-red-600" />}
+                                        </div>
+                                        {cols === 3 && (
+                                          <div className="flex items-center gap-1">
+                                            {withinRelaxedHighlight ? <Check className="h-3.5 w-3.5 shrink-0 text-green-600" /> : <X className="h-3.5 w-3.5 shrink-0 text-red-600" />}
+                                          </div>
+                                        )}
+                                        <div>Shadow: {(row.shadowClip * 100).toFixed(2)}%</div>
+                                        <div className="flex items-center gap-1">
+                                          {withinShadow ? <Check className="h-3.5 w-3.5 shrink-0 text-green-600" /> : <X className="h-3.5 w-3.5 shrink-0 text-red-600" />}
+                                        </div>
+                                        {cols === 3 && (
+                                          <div className="flex items-center gap-1">
+                                            {withinRelaxedShadow ? <Check className="h-3.5 w-3.5 shrink-0 text-green-600" /> : <X className="h-3.5 w-3.5 shrink-0 text-red-600" />}
+                                          </div>
+                                        )}
+                                      </div>
                                     </div>
                                   );
                                 }}
@@ -723,17 +744,19 @@ export function AEModePanel({
                                   ev: c.ev,
                                   entropy: c.entropy ?? undefined,
                                 }))}
-                                margin={{ top: 32, right: 24, bottom: 24, left: 50 }}
+                                margin={{ top: 24, right: 24, bottom: 32, left: 85 }}
                               >
                                 <XAxis
                                   dataKey="ev"
                                   type="number"
                                   tickFormatter={(v) => v.toFixed(1)}
-                                  label={{ value: 'EV', position: 'insideBottom', offset: -5 }}
+                                  label={{ value: 'EV', position: 'insideBottom', offset: 5 }}
                                 />
                                 <YAxis
                                   tickFormatter={(v) => v.toFixed(2)}
-                                  label={{ value: 'Entropy', angle: -90, position: 'insideLeft' }}
+                                  width={65}
+                                  tickMargin={8}
+                                  label={{ value: 'Entropy', angle: -90, position: 'insideBottomLeft', offset: -20 }}
                                 />
                                 <Tooltip
                                   formatter={(value: number) => [value != null ? value.toFixed(3) : '—', 'Entropy']}
@@ -772,27 +795,29 @@ export function AEModePanel({
                                     midtoneError: c.midtoneError,
                                     median: c.median,
                                   }))}
-                                  margin={{ top: 32, right: 80, bottom: 32, left: 70 }}
+                                  margin={{ top: 24, right: 100, bottom: 32, left: 95 }}
                                 >
                                   <XAxis
                                     dataKey="ev"
                                     type="number"
                                     tickFormatter={(v) => v.toFixed(1)}
-                                    label={{ value: 'EV', position: 'insideBottom', offset: -5 }}
+                                    label={{ value: 'EV', position: 'insideBottom', offset: 5 }}
                                   />
                                   <YAxis
                                     yAxisId="error"
                                     orientation="left"
                                     tickFormatter={(v) => v.toFixed(3)}
-                                    width={55}
-                                    label={{ value: 'Midtone error', angle: -90, position: 'insideLeft' }}
+                                    width={70}
+                                    tickMargin={8}
+                                    label={{ value: 'Midtone error', angle: -90, position: 'insideBottomLeft', offset: -20 }}
                                   />
                                   <YAxis
                                     yAxisId="median"
                                     orientation="right"
-                                    width={55}
+                                    width={70}
+                                    tickMargin={8}
                                     tickFormatter={(v) => v.toFixed(2)}
-                                    label={{ value: 'Median', angle: 90, position: 'insideRight' }}
+                                    label={{ value: 'Median', angle: 90, position: 'insideBottomRight', offset: -20 }}
                                   />
                                   <Tooltip
                                     formatter={(value: number, name: string) => {
@@ -1010,7 +1035,7 @@ export function AEModePanel({
                                   margin={{ top: 4, right: 24, bottom: 24, left: 50 }}
                                 >
                                   <XAxis dataKey="name" tick={{ fontSize: 11 }} />
-                                  <YAxis tickFormatter={(v) => v.toFixed(2)} label={{ value: 'EV', angle: -90, position: 'insideLeft' }} />
+                                  <YAxis tickFormatter={(v) => v.toFixed(2)} label={{ value: 'EV', angle: -90, position: 'insideBottomLeft', offset: -15 }} />
                                   <Tooltip formatter={(v: number) => [v.toFixed(3), 'EV']} />
                                   <Bar dataKey="ev" radius={[2, 2, 0, 0]}>
                                     {[ 'hsl(var(--chart-1))', 'hsl(var(--chart-2))', 'hsl(var(--chart-3))' ].map((fill, i) => (
@@ -1053,15 +1078,15 @@ export function AEModePanel({
                                       },
                                       {
                                         name: 'ISO',
-                                        norm: constraints.isoMax > 100
-                                          ? (allocatedSettings.iso - 100) / (constraints.isoMax - 100)
+                                        norm: constraints.isoMax > isoMin
+                                          ? (allocatedSettings.iso - isoMin) / (constraints.isoMax - isoMin)
                                           : 0.5,
                                       },
                                     ]}
                                     margin={{ top: 4, right: 24, bottom: 24, left: 50 }}
                                   >
                                     <XAxis dataKey="name" tick={{ fontSize: 11 }} />
-                                    <YAxis domain={[ 0, 1 ]} tickFormatter={(v) => v.toFixed(2)} label={{ value: 'Fraction of range', angle: -90, position: 'insideLeft' }} />
+                                    <YAxis domain={[ 0, 1 ]} tickFormatter={(v) => v.toFixed(2)} label={{ value: 'Fraction of range', angle: -90, position: 'insideBottomLeft', offset: -15 }} />
                                     <Tooltip formatter={(v: number) => [v.toFixed(2), 'Fraction']} />
                                     <ReferenceLine y={0} stroke="hsl(var(--muted-foreground))" strokeDasharray="2 2" />
                                     <ReferenceLine y={1} stroke="hsl(var(--muted-foreground))" strokeDasharray="2 2" />

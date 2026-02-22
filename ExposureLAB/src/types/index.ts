@@ -63,6 +63,8 @@ export type Constraints = {
    * Currently not used by the allocation or simulation pipeline.
    */
   handheld: boolean;
+  /** Minimum ISO. When relaxing constraints, we never impose a stricter minimum than the user set. */
+  isoMin?: number;
   isoMax: number;
   shutterMin: number;
   shutterMax: number;

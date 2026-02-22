@@ -4,6 +4,7 @@ import {
   computeClipping,
   computeWeightedHistogram,
   computePercentiles,
+  computeIQRBounds,
 } from '@/metering/stats';
 import { ImageRGBAFloat } from '@/types';
 
@@ -26,7 +27,15 @@ export function runLexiAE(
   // Compute base luminance for the metered image
   const baseLuminance = computeWeightedLuminance(image, weights);
   const n = baseLuminance.length;
-  const satThreshold = 0.98;
+
+  // Use 1.5*IQR rule for trimming outliers instead of fixed L<0.98.
+  // Pixels outside [lower, upper] are excluded from the manipulated histogram.
+  const { cdf: cdfForIQR, min: histMin, max: histMax } = computeWeightedHistogram(
+    baseLuminance,
+    weights
+  );
+  const { lower: iqrLower, upper: iqrUpper } = computeIQRBounds(cdfForIQR, histMin, histMax);
+  const inRange = (v: number) => v >= iqrLower && v <= iqrUpper;
 
   // Build algorithm-specific weights over pixels for histogram / statistics.
   // These correspond to the "manipulated histogram" in the paper: we reshape
@@ -37,14 +46,14 @@ export function runLexiAE(
   let saliencyMap: { data: Float32Array; width: number; height: number } | undefined;
 
   if (algorithm === 'global') {
-    // Global: treat all non-saturated pixels equally (full-frame histogram).
+    // Global: treat all in-range pixels equally (full-frame histogram).
     for (let i = 0; i < n; i++) {
-      algoWeights[i] = baseLuminance[i] >= satThreshold ? 0 : 1;
+      algoWeights[i] = inRange(baseLuminance[i]) ? 1 : 0;
     }
   } else if (algorithm === 'entropy' || algorithm === 'semantic') {
     // Entropy / semantic: use metering weights (matrix, center, spot, or subject).
     for (let i = 0; i < n; i++) {
-      algoWeights[i] = baseLuminance[i] >= satThreshold ? 0 : weights[i];
+      algoWeights[i] = inRange(baseLuminance[i]) ? weights[i] : 0;
     }
   } else if (algorithm === 'saliency') {
     // Saliency: simple single-frame proxy. Emphasize pixels whose luminance
@@ -69,7 +78,7 @@ export function runLexiAE(
     for (let i = 0; i < n; i++) {
       const sal = saliencyMapData[i] * invMaxDev; // 0–1
       saliencyVis[i] = sal;
-      algoWeights[i] = baseLuminance[i] >= satThreshold ? 0 : sal * weights[i];
+      algoWeights[i] = inRange(baseLuminance[i]) ? sal * weights[i] : 0;
     }
     saliencyMap = { data: saliencyVis, width: image.width, height: image.height };
   }
@@ -205,7 +214,8 @@ export function runLexiAE(
     } else {
       // No EV satisfies both tolerances; relax them by choosing the candidate
       // that minimally violates them, then minimize midtone error as a
-      // secondary criterion.
+      // secondary criterion. When relaxing, we accept more violation (higher
+      // clipping) — we never impose a stricter minimum than the user set.
       constraintsRelaxed = true;
       chosen = candidates.reduce((best, c) => {
         const bestPenalty = penaltyFor(best);

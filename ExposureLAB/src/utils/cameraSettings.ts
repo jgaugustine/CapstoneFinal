@@ -2,7 +2,7 @@ import { CameraSettings, ExposureMetadata, Constraints } from '@/types';
 
 // Match ManualModePanel slider values exactly
 export const APERTURE_STOPS = [2.8, 4.0, 5.6, 8.0, 11, 16, 22, 32];
-export const ISO_STOPS = [100, 200, 400, 800, 1600, 3200, 6400, 12800, 25600];
+export const ISO_STOPS = [50, 64, 100, 200, 400, 800, 1600, 3200, 6400, 12800, 25600];
 
 export function generateShutterSpeeds(): number[] {
   const speeds: number[] = [];
@@ -54,7 +54,8 @@ export function snapMetadataToSliderValues(
     constraints.apertureMin,
     constraints.apertureMax
   );
-  const iso = snapToNearest(meta.iso, ISO_STOPS, 100, constraints.isoMax);
+  const isoMin = constraints.isoMin ?? 100;
+  const iso = snapToNearest(meta.iso, ISO_STOPS, isoMin, constraints.isoMax);
 
   return { shutterSeconds: shutter, aperture, iso };
 }

@@ -14,7 +14,10 @@ export function settingsToSimEV(settings: CameraSettings | ExposureMetadata): nu
   );
 }
 
-/** Achievable EV range for allocation (no constraint hits). Used to restrict AE candidates. */
+/**
+ * Achievable EV range for allocation (no constraint hits). Used to restrict AE candidates.
+ * When relaxing constraints, the minimum for any setting is what the user set — never stricter.
+ */
 export function evRangeFromConstraints(
   constraints: Constraints,
   preference: Preference = 'balanced'
@@ -104,14 +107,14 @@ function quantizeAperture(aperture: number, min: number, max: number): number {
   return Math.max(min, Math.min(max, closest));
 }
 
-// Standard ISO stops
-const isoStops = [100, 200, 400, 800, 1600, 3200, 6400, 12800, 25600];
-function quantizeISO(iso: number, max: number): number {
-  let closest = isoStops[0];
+// Standard ISO stops (include extended lows for cameras with isoMin < 100)
+const isoStops = [50, 64, 100, 200, 400, 800, 1600, 3200, 6400, 12800, 25600];
+function quantizeISO(iso: number, min: number, max: number): number {
+  let closest = isoStops.find((s) => s >= min && s <= max) ?? min;
   let minDiff = Math.abs(iso - closest);
-  
+
   for (const stop of isoStops) {
-    if (stop <= max) {
+    if (stop >= min && stop <= max) {
       const diff = Math.abs(iso - stop);
       if (diff < minDiff) {
         minDiff = diff;
@@ -119,11 +122,12 @@ function quantizeISO(iso: number, max: number): number {
       }
     }
   }
-  
-  return Math.min(max, closest);
+
+  return Math.max(min, Math.min(max, closest));
 }
 
-const ISO_MIN = 100;
+/** Default ISO minimum when user does not set isoMin. Never use a stricter (higher) minimum than the user set. */
+const ISO_MIN_DEFAULT = 100;
 
 export function allocateSettings(
   targetEV: number,
@@ -162,8 +166,8 @@ export function allocateSettings(
     const finalApertureEV = Math.log2(BASE_APERTURE / aperture) / Math.log2(Math.sqrt(2));
     const finalISOEV = remainingEV - finalApertureEV;
     iso = evToISO(finalISOEV, BASE_ISO);
-    iso = quantizeISO(iso, constraints.isoMax);
-    
+    iso = quantizeISO(iso, constraints.isoMin ?? ISO_MIN_DEFAULT, constraints.isoMax);
+
   } else if (preference === 'aperture') {
     // Prioritize aperture
     aperture = evToAperture(quantizedEV, BASE_APERTURE);
@@ -180,12 +184,16 @@ export function allocateSettings(
     const finalShutterEV = Math.log2(shutter / BASE_SHUTTER);
     const finalISOEV = remainingEV - finalShutterEV;
     iso = evToISO(finalISOEV, BASE_ISO);
-    iso = quantizeISO(iso, constraints.isoMax);
-    
+    iso = quantizeISO(iso, constraints.isoMin ?? ISO_MIN_DEFAULT, constraints.isoMax);
+
   } else if (preference === 'iso') {
-    // Minimize ISO
-    iso = BASE_ISO;
-    const isoEV = 0;
+    // Minimize ISO: use the user's minimum (never impose a stricter floor)
+    iso = quantizeISO(
+      constraints.isoMin ?? ISO_MIN_DEFAULT,
+      constraints.isoMin ?? ISO_MIN_DEFAULT,
+      constraints.isoMax
+    );
+    const isoEV = Math.log2(iso / BASE_ISO);
     const remainingEV = quantizedEV - isoEV;
     
     // Balance shutter and aperture
@@ -211,10 +219,11 @@ export function allocateSettings(
     aperture = quantizeAperture(aperture, constraints.apertureMin, constraints.apertureMax);
     
     iso = evToISO(isoEV, BASE_ISO);
-    iso = quantizeISO(iso, constraints.isoMax);
+    iso = quantizeISO(iso, constraints.isoMin ?? ISO_MIN_DEFAULT, constraints.isoMax);
   }
-  
-  // Check constraint hits
+
+  // Check constraint hits. Never impose a stricter minimum than the user set.
+  const isoMin = constraints.isoMin ?? ISO_MIN_DEFAULT;
   if (shutter <= constraints.shutterMin) {
     log.constraintHits.push('shutter_min');
   }
@@ -227,14 +236,18 @@ export function allocateSettings(
   if (aperture >= constraints.apertureMax) {
     log.constraintHits.push('aperture_max');
   }
+  if (iso <= isoMin) {
+    log.constraintHits.push('iso_min');
+  }
   if (iso >= constraints.isoMax) {
     log.constraintHits.push('iso_max');
   }
 
-  // Ensure valid exposure settings: finite, positive, within constraints
+  // Ensure valid exposure settings: finite, positive, within constraints.
+  // Min for anything is what the user set; never impose a stricter minimum when relaxing.
   const safeShutter = clampFinite(shutter, constraints.shutterMin, constraints.shutterMax);
   const safeAperture = clampFinite(aperture, constraints.apertureMin, constraints.apertureMax);
-  const safeIso = Math.max(ISO_MIN, clampFinite(iso, ISO_MIN, constraints.isoMax));
+  const safeIso = Math.max(isoMin, clampFinite(iso, isoMin, constraints.isoMax));
 
   // Populate EV breakdown in log if we have finite values
   if (
@@ -298,13 +311,14 @@ export function allocateSettingsForSimEVDelta(
   let { shutterSeconds, aperture, iso } = settings;
   const targetProduct = Math.pow(2, targetSimEV) * aperture * aperture;
   let solvedISO = (100 * targetProduct) / shutterSeconds;
-  solvedISO = Math.max(ISO_MIN, Math.min(constraints.isoMax, solvedISO));
-  iso = quantizeISO(solvedISO, constraints.isoMax);
+  const isoMin = constraints.isoMin ?? ISO_MIN_DEFAULT;
+  solvedISO = Math.max(isoMin, Math.min(constraints.isoMax, solvedISO));
+  iso = quantizeISO(solvedISO, isoMin, constraints.isoMax);
 
   const finalSettings: CameraSettings = {
     shutterSeconds: clampFinite(shutterSeconds, constraints.shutterMin, constraints.shutterMax),
     aperture: clampFinite(aperture, constraints.apertureMin, constraints.apertureMax),
-    iso: Math.max(ISO_MIN, clampFinite(iso, ISO_MIN, constraints.isoMax)),
+    iso: Math.max(isoMin, clampFinite(iso, isoMin, constraints.isoMax)),
   };
 
   if (

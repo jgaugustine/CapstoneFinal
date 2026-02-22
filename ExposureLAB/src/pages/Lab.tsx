@@ -79,9 +79,10 @@ export default function Lab() {
     motionThreshold: 1/30,
   };
 
-  // Constraints for allocation
+  // Constraints for allocation. When relaxing, we never impose a stricter minimum than the user set.
   const constraints: Constraints = {
     handheld: true,
+    isoMin: 100,
     isoMax: 25600,
     shutterMin: 1/8000,
     shutterMax: 30,
