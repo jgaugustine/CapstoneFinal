@@ -12,5 +12,6 @@ Cameras are fundamentally photon counters. Light from the scene arrives at the s
 
 - **Photon shot noise**: The random arrival of photons follows a Poisson distribution. This fundamental noise cannot be eliminated—only reduced by collecting more photons.
 - **Expose to the right (ETTR)**: Maximizing exposure without clipping highlights improves SNR in the shadows.
+- **Exposure triangle**: Shutter, aperture, and ISO together control how much light reaches the sensor and how it is captured.
 
-*Explore the PhotonSimulation lab to see photon arrival and conversion in action.*
+*Explore ExposureLAB to adjust shutter, aperture, and ISO and see the simulated result.*

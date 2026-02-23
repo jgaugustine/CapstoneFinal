@@ -11,8 +11,7 @@ export function ForPhotographers({ stage, className }: ForPhotographersProps) {
   return (
     <div
       className={cn(
-        "rounded-lg border border-border bg-card p-6",
-        "border-l-4 border-l-primary",
+        "pl-4 border-l-2 border-l-primary/40",
         className
       )}
     >

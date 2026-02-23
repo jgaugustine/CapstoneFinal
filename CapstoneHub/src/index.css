@@ -20,6 +20,11 @@
     --input: 220 35% 15%;
     --ring: 185 100% 50%;
     --radius: 0.5rem;
+    --section-light: 30 55% 16%;
+    --section-sensor: 220 55% 14%;
+    --section-readout: 250 50% 14%;
+    --section-demosaic: 165 45% 15%;
+    --section-post: 15 50% 16%;
   }
 }
 

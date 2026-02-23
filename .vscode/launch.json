@@ -63,6 +63,18 @@
           "uriFormat": "%s",
           "action": "openExternally"
         }
+      },
+      {
+        "type": "node-terminal",
+        "request": "launch",
+        "name": "Dev: Hub",
+        "cwd": "${workspaceFolder}/CapstoneHub",
+        "command": "npm run dev",
+        "serverReadyAction": {
+          "pattern": "Local:.*(https?://.*)",
+          "uriFormat": "%s",
+          "action": "openExternally"
+        }
       }
     ],
 

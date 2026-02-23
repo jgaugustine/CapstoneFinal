@@ -40,6 +40,13 @@ export default {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))",
         },
+        section: {
+          light: "hsl(var(--section-light))",
+          sensor: "hsl(var(--section-sensor))",
+          readout: "hsl(var(--section-readout))",
+          demosaic: "hsl(var(--section-demosaic))",
+          post: "hsl(var(--section-post))",
+        },
       },
       borderRadius: {
         lg: "var(--radius)",

@@ -4,6 +4,7 @@ import rehypeKatex from "rehype-katex";
 import remarkMath from "remark-math";
 import "katex/dist/katex.min.css";
 import { cn } from "@/lib/utils";
+import { MermaidDiagram } from "./MermaidDiagram";
 
 interface ArticleViewerProps {
   content: string;
@@ -26,6 +27,19 @@ export function ArticleViewer({ content, className }: ArticleViewerProps) {
       <ReactMarkdown
         remarkPlugins={[remarkGfm, remarkMath]}
         rehypePlugins={[rehypeKatex]}
+        components={{
+          code({ node, inline, className, children, ...props }) {
+            const match = /language-(\w+)/.exec(className || "");
+            if (!inline && match?.[1] === "mermaid") {
+              return <MermaidDiagram chart={String(children).replace(/\n$/, "")} />;
+            }
+            return (
+              <code className={className} {...props}>
+                {children}
+              </code>
+            );
+          },
+        }}
       >
         {content}
       </ReactMarkdown>

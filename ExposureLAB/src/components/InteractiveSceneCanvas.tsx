@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { ImageRGBAFloat, RadialMaskConfig, LinearMaskConfig } from '@/types';
+import { ImageRGBAFloat, RadialMaskConfig, LinearMaskConfig, WeightMap } from '@/types';
 import { linearToSrgb } from '@/io/loadImage';
 import { generateRadialMask, generateLinearMask } from '@/utils/masks';
 
@@ -9,6 +9,8 @@ interface InteractiveSceneCanvasProps {
   linearMasks?: LinearMaskConfig[];
   displayWidth?: number;
   showMaskOverlay?: boolean;
+  showWeightOverlay?: boolean;
+  meteringWeights?: WeightMap | null;
   onAddRadialMask: (centerX: number, centerY: number, radiusX: number, radiusY: number) => void;
   onAddLinearMask: (angle: number, offset: number, width: number) => void;
   maskDrawingMode: 'radial' | 'linear' | null;
@@ -22,6 +24,8 @@ export function InteractiveSceneCanvas({
   linearMasks,
   displayWidth,
   showMaskOverlay = true,
+  showWeightOverlay = false,
+  meteringWeights = null,
   onAddRadialMask,
   onAddLinearMask,
   maskDrawingMode,
@@ -150,6 +154,29 @@ export function InteractiveSceneCanvas({
 
     ctx.putImageData(imageData, 0, 0);
 
+    // Draw metering weight map overlay (cyan tint: higher weight = more visible)
+    if (showWeightOverlay && meteringWeights && meteringWeights.length === image.width * image.height) {
+      const overlay = ctx.createImageData(image.width, image.height);
+      for (let i = 0; i < meteringWeights.length; i++) {
+        const w = meteringWeights[i];
+        const alpha = Math.round(w * 120); // max ~47% opacity for weight=1
+        const idx = i * 4;
+        overlay.data[idx] = 0;     // R
+        overlay.data[idx + 1] = 200; // G (cyan)
+        overlay.data[idx + 2] = 255; // B
+        overlay.data[idx + 3] = alpha;
+      }
+      const overlayCanvas = document.createElement('canvas');
+      overlayCanvas.width = image.width;
+      overlayCanvas.height = image.height;
+      const overlayCtx = overlayCanvas.getContext('2d');
+      if (overlayCtx) {
+        overlayCtx.putImageData(overlay, 0, 0);
+        ctx.globalCompositeOperation = 'source-over';
+        ctx.drawImage(overlayCanvas, 0, 0);
+      }
+    }
+
     // Draw red overlay for enabled masks (must composite, not replace - putImageData overwrites)
     if (showMaskOverlay && (radialMasks || linearMasks)) {
       const overlay = ctx.createImageData(image.width, image.height);
@@ -250,7 +277,7 @@ export function InteractiveSceneCanvas({
         ctx.stroke();
       }
     }
-  }, [image, radialMasks, linearMasks, isDrawing, drawStart, drawCurrent, maskDrawingMode, showMaskOverlay]);
+  }, [image, radialMasks, linearMasks, isDrawing, drawStart, drawCurrent, maskDrawingMode, showMaskOverlay, showWeightOverlay, meteringWeights]);
 
   return (
     <div

@@ -332,6 +332,17 @@ export function AEModePanel({
                 <span className="text-muted-foreground">ΔEV:</span>
                 <span className="font-mono">{trace.chosenEV >= 0 ? '+' : ''}{trace.chosenEV.toFixed(2)}</span>
               </div>
+              {algorithm === 'entropy' && (() => {
+                const chosen = trace.candidates.find((c) => c.stage === 'chosen');
+                const entropy = chosen?.entropy;
+                if (entropy == null || !Number.isFinite(entropy)) return null;
+                return (
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Entropy:</span>
+                    <span className="font-mono">{entropy.toFixed(3)}</span>
+                  </div>
+                );
+              })()}
               {trace.chosenReason && (
                 <p className="text-xs text-muted-foreground">
                   {trace.chosenReason}

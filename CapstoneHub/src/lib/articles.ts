@@ -66,6 +66,11 @@ From raw CFA data to full RGB per pixel.
 How AE algorithms choose shutter, aperture, and ISO.
 
 *Full article coming soon.*`,
+    "post-processing": `# Post-processing
+
+Tone mapping, color correction, and editing after capture.
+
+*Full article coming soon.*`,
   };
   return placeholders[slug] ?? `# ${slug}\n\n*Article content will appear here.*`;
 }

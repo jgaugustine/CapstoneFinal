@@ -55,7 +55,7 @@ export default function Lab() {
   const [meteringMode, setMeteringMode] = useState<MeteringMode>('matrix');
   const [aePriorities, setAEPriorities] = useState<AEPriorities>({
     etaHighlight: 0.05,
-    etaShadow: 0.05,
+    etaShadow: 0.005,
     epsilonShadow: 0.01,
     midtoneTarget: 0.18,
     relaxationNorm: 'Linf',
@@ -391,6 +391,7 @@ export default function Lab() {
                 onSceneChange={handleSceneChange}
                 canvasDisplayWidth={canvasDisplayWidth}
                 isUploading={isImageUploading}
+                meteringWeights={meteringWeights}
               />
 
               <SimParamsPanel simParams={simParams} onSimParamsChange={setSimParams} />

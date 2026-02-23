@@ -1,5 +1,5 @@
 import type { LucideIcon } from "lucide-react";
-import { Sun, Cpu, Gauge, Grid3X3, SlidersHorizontal } from "lucide-react";
+import { Sun, Cpu, Gauge, Grid3X3, Palette } from "lucide-react";
 
 export type StageId = "light" | "sensor" | "readout" | "demosaic" | "post";
 
@@ -17,30 +17,32 @@ export interface StageConfig {
 export const STAGES: StageConfig[] = [
   {
     id: "light",
-    label: "Light",
+    label: "Light & Exposure",
     path: "/light",
     icon: Sun,
     guidingQuestion: 'Why does "more light = less noise"?',
     takeaways: [
       "Brighter scenes → more photons per pixel",
       "More signal relative to random variation",
+      "Shutter, aperture, and ISO control how much light reaches the sensor",
       "Expose to the right (ETTR) when you can",
     ],
     articleSlug: "light-to-image",
-    labs: [{ label: "PhotonSimulation", path: "/labs/photon-sim" }],
+    labs: [{ label: "ExposureLAB", path: "/labs/exposure" }],
   },
   {
     id: "sensor",
-    label: "Sensor",
+    label: "Sensor & Metering",
     path: "/sensor",
     icon: Cpu,
-    guidingQuestion: "Why do sensor size and pixel count both matter?",
+    guidingQuestion: "How does my camera measure the scene?",
     takeaways: [
       "Bigger pixels → larger wells → better SNR at base ISO",
-      "Small sensors hit limits sooner in low light",
+      "Metering mode (matrix/spot/center) weights the scene differently",
+      "AE priorities (highlight vs. shadow) determine where clipping is tolerated",
     ],
     articleSlug: "pixels-wells",
-    labs: [{ label: "PhotonToDigitalConverter", path: "/labs/photon-to-digital" }],
+    labs: [{ label: "ExposureLAB", path: "/labs/exposure" }],
   },
   {
     id: "readout",
@@ -54,10 +56,7 @@ export const STAGES: StageConfig[] = [
       "Prefer longer shutter / wider aperture when possible",
     ],
     articleSlug: "iso-shot-noise",
-    labs: [
-      { label: "BitDepthVisualizer", path: "/labs/bit-depth" },
-      { label: "PhotonToDigitalConverter", path: "/labs/photon-to-digital" },
-    ],
+    labs: [{ label: "BitDepthVisualizer", path: "/labs/bit-depth" }],
   },
   {
     id: "demosaic",
@@ -69,24 +68,21 @@ export const STAGES: StageConfig[] = [
       "Different CFA patterns → different sharpness/artifact tradeoffs",
       "In practice, processing matters more than sensor brand",
     ],
-    articleSlug: "cfa",
+    articleSlug: "demosaicing",
     labs: [{ label: "DemosaicLab", path: "/labs/demosaic" }],
   },
   {
     id: "post",
     label: "Post-processing",
     path: "/post",
-    icon: SlidersHorizontal,
-    guidingQuestion: "How does my camera decide exposure?",
+    icon: Palette,
+    guidingQuestion: "What happens after demosaicing?",
     takeaways: [
-      "Metering mode (matrix/spot/center) weights the scene differently",
-      "AE priorities (highlight vs. shadow) determine where clipping is tolerated",
+      "Tone mapping and color correction shape the final image",
+      "Editing preserves or alters the original capture",
     ],
-    articleSlug: "metering",
-    labs: [
-      { label: "ExposureLAB", path: "/labs/exposure" },
-      { label: "ImageLab", path: "/labs/image" },
-    ],
+    articleSlug: "post-processing",
+    labs: [{ label: "ImageLab", path: "/labs/image" }],
   },
 ];
 

@@ -14,4 +14,8 @@ Each pixel on a sensor is a **photosite**—a well that collects electrons gener
 - **Read noise** from the ADC affects shadow detail.
 - **Dark current** adds unwanted electrons during long exposures.
 
-*Explore PhotonToDigitalConverter to see wells, QE, and charge accumulation.*
+## Metering
+
+Metering determines how the camera weights the scene to decide exposure. **Matrix** (evaluative) weights the whole frame; **center-weighted** emphasizes the center; **spot** measures a small region (e.g., the focus point). AE (auto exposure) uses metering to choose shutter, aperture, and ISO within highlight and shadow tolerances.
+
+*Explore ExposureLAB to try metering modes and see how AE chooses exposure.*

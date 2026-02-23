@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { SceneState, RadialMaskConfig, LinearMaskConfig } from '@/types';
+import { SceneState, RadialMaskConfig, LinearMaskConfig, WeightMap } from '@/types';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Slider } from '@/components/ui/slider';
 import { Label } from '@/components/ui/label';
@@ -19,6 +19,7 @@ interface ScenePanelProps {
   onSceneChange: (scene: SceneState) => void;
   canvasDisplayWidth?: number;
   isUploading?: boolean;
+  meteringWeights?: WeightMap | null;
 }
 
 export function ScenePanel({
@@ -30,11 +31,13 @@ export function ScenePanel({
   onSceneChange,
   canvasDisplayWidth,
   isUploading = false,
+  meteringWeights = null,
 }: ScenePanelProps) {
   const radialMasks = scene?.radialMasks || [];
   const linearMasks = scene?.linearMasks || [];
   const [maskDrawingMode, setMaskDrawingMode] = useState<'radial' | 'linear' | null>(null);
   const [showMaskOverlay, setShowMaskOverlay] = useState(true);
+  const [showWeightOverlay, setShowWeightOverlay] = useState(false);
 
   // Apply scene illumination and masks to the displayed image as well,
   // so the scene canvas matches what is being simulated.
@@ -122,14 +125,24 @@ export function ScenePanel({
       <CardHeader>
         <div className="flex items-center justify-between gap-2">
           <CardTitle>Scene</CardTitle>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setShowMaskOverlay((prev) => !prev)}
-            disabled={!scene}
-          >
-            {showMaskOverlay ? 'Hide masks' : 'Show masks'}
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowWeightOverlay((prev) => !prev)}
+              disabled={!scene || !meteringWeights}
+            >
+              {showWeightOverlay ? 'Hide' : 'Show'} metering
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowMaskOverlay((prev) => !prev)}
+              disabled={!scene}
+            >
+              {showMaskOverlay ? 'Hide masks' : 'Show masks'}
+            </Button>
+          </div>
         </div>
         <CardDescription>
           Upload a reference image. Adjust global and mask lighting to shape the scene.
@@ -168,6 +181,8 @@ export function ScenePanel({
               linearMasks={scene.linearMasks}
               displayWidth={canvasDisplayWidth}
               showMaskOverlay={showMaskOverlay}
+              showWeightOverlay={showWeightOverlay}
+              meteringWeights={meteringWeights}
               onAddRadialMask={handleAddRadialMask}
               onAddLinearMask={handleAddLinearMask}
               maskDrawingMode={maskDrawingMode}
