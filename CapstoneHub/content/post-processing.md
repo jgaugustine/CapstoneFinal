@@ -8,4 +8,4 @@ After demosaicing, the image undergoes **tone mapping** and **color correction**
 - **Color correction**: White balance, color matrix, creative adjustments.
 - **Editing**: Filters, curves, local adjustments—all operate on the post-demosaic image.
 
-*Check out ImageLab to explore color transforms and the filter pipeline.*
+*Explore ImageLab for color transforms and the filter pipeline.*

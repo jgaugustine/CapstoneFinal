@@ -16,4 +16,4 @@ Auto exposure (AE) chooses shutter speed, aperture, and ISO to achieve a target 
 - **Shadow tolerance (ηs)**: Max allowed shadow clipping.
 - **Midtone target**: Where the histogram center should land.
 
-*Check out ExposureLAB to explore AE with different metering modes and priorities.*
+*Explore ExposureLAB to run AE with different metering modes and priorities.*

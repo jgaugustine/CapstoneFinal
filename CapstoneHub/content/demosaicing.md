@@ -15,4 +15,4 @@ Raw sensor data is a mosaic: each pixel has only one color (R, G, or B). **Demos
 - Edge-aware: better sharpness, some wormy texture risk.
 - RAW processors (Adobe, Capture One) use proprietary algorithms.
 
-*Check out DemosaicLab to explore demosaicing algorithms.*
+*Explore DemosaicLab to compare algorithms on real and synthetic images.*

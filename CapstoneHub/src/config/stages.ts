@@ -1,14 +1,7 @@
 import type { LucideIcon } from "lucide-react";
-import { Sun, Cpu, Gauge, Palette } from "lucide-react";
+import { Sun, Cpu, Gauge, Grid3X3, Palette } from "lucide-react";
 
-export type StageId = "light" | "sensor" | "readout-digitization" | "post";
-
-export interface ArticleMeta {
-  slug: string;
-  title: string;
-  abstract: string;
-  fullSlug?: string;
-}
+export type StageId = "light" | "sensor" | "readout" | "demosaic" | "post";
 
 export interface StageConfig {
   id: StageId;
@@ -17,8 +10,7 @@ export interface StageConfig {
   icon: LucideIcon;
   guidingQuestion: string;
   takeaways: string[];
-  /** Article metadata for cards: title, abstract, optional fullSlug for extended article */
-  articles: ArticleMeta[];
+  articleSlug: string;
   labs: { label: string; path: string }[];
 }
 
@@ -31,53 +23,53 @@ export const STAGES: StageConfig[] = [
     guidingQuestion: 'Why does "more light = less noise"?',
     takeaways: [
       "Brighter scenes → more photons per pixel",
-      "Shutter, aperture, and ISO control light; ETTR when possible",
+      "More signal relative to random variation",
+      "Shutter, aperture, and ISO control how much light reaches the sensor",
+      "Expose to the right (ETTR) when you can",
     ],
-    articles: [
-      { slug: "light-to-image", title: "Light → Image: Cameras as Photon Counters", abstract: "How cameras convert light into digital images by counting photons." },
-      { slug: "ae-algorithms", title: "Exposure Programs — AE, Shutter, Aperture Priority", abstract: "How AE chooses EV and allocates it across shutter, aperture, and ISO." },
-    ],
-    labs: [
-      { label: "Photon Simulation", path: "/labs/photon-sim" },
-      { label: "ExposureLAB", path: "/labs/exposure" },
-    ],
+    articleSlug: "light-to-image",
+    labs: [{ label: "ExposureLAB", path: "/labs/exposure" }],
   },
   {
     id: "sensor",
     label: "Sensor & Metering",
     path: "/sensor",
     icon: Cpu,
-    guidingQuestion: "Does Bayer vs. X-Trans actually change my photos?",
+    guidingQuestion: "How does my camera measure the scene?",
     takeaways: [
-      "Different CFA patterns → different sharpness/artifact tradeoffs",
-      "Processing matters more than sensor brand in practice",
+      "Bigger pixels → larger wells → better SNR at base ISO",
+      "Metering mode (matrix/spot/center) weights the scene differently",
+      "AE priorities (highlight vs. shadow) determine where clipping is tolerated",
     ],
-    articles: [
-      { slug: "cfa", title: "Color Filter Arrays — Bayer, X-Trans, Foveon", abstract: "How CFAs sample color and how demosaicing reconstructs full RGB.", fullSlug: "cfa-full" },
-      { slug: "metering", title: "Exposure Value, Dynamic Range, Metering", abstract: "How the camera decides what to measure for exposure." },
-    ],
+    articleSlug: "pixels-wells",
     labs: [{ label: "ExposureLAB", path: "/labs/exposure" }],
   },
   {
-    id: "readout-digitization",
-    label: "Readout & Digitization",
-    path: "/readout-digitization",
+    id: "readout",
+    label: "Readout",
+    path: "/readout",
     icon: Gauge,
-    guidingQuestion: "From raw sensor data to full-color image?",
+    guidingQuestion: "Why does raising ISO make noise visible?",
     takeaways: [
-      "ISO amplifies signal and noise; shot noise dominates in shadows",
-      "Prefer longer shutter or wider aperture when possible",
-      "Demosaicing trades speed for quality",
+      "ISO amplifies both signal and noise",
+      "Shot noise dominates in shadows",
+      "Prefer longer shutter / wider aperture when possible",
     ],
-    articles: [
-      { slug: "pixels-wells", title: "Pixels, Wells, and Readout", abstract: "Sensor architecture and charge-to-digital conversion." },
-      { slug: "iso-shot-noise", title: "ISO, Shot Noise, SNR", abstract: "Why raising ISO makes noise visible." },
-      { slug: "demosaicing", title: "Demosaicing — Interpolation, Edges, Moiré", abstract: "From raw CFA data to full RGB per pixel." },
+    articleSlug: "iso-shot-noise",
+    labs: [{ label: "BitDepthVisualizer", path: "/labs/bit-depth" }],
+  },
+  {
+    id: "demosaic",
+    label: "Demosaicing",
+    path: "/demosaic",
+    icon: Grid3X3,
+    guidingQuestion: "Does Bayer vs. X-Trans actually change my photos?",
+    takeaways: [
+      "Different CFA patterns → different sharpness/artifact tradeoffs",
+      "In practice, processing matters more than sensor brand",
     ],
-    labs: [
-      { label: "BitDepthVisualizer", path: "/labs/bit-depth" },
-      { label: "DemosaicLab", path: "/labs/demosaic" },
-    ],
+    articleSlug: "cfa",
+    labs: [{ label: "DemosaicLab", path: "/labs/demosaic" }],
   },
   {
     id: "post",
@@ -89,9 +81,7 @@ export const STAGES: StageConfig[] = [
       "Tone mapping and color correction shape the final image",
       "Editing preserves or alters the original capture",
     ],
-    articles: [
-      { slug: "post-processing", title: "Post-processing", abstract: "Tone mapping, color correction, and editing after capture." },
-    ],
+    articleSlug: "post-processing",
     labs: [{ label: "ImageLab", path: "/labs/image" }],
   },
 ];

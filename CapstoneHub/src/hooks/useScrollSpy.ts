@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import type { StageId } from "@/config/stages";
 
-const STAGE_IDS: StageId[] = ["light", "sensor", "readout-digitization", "post"];
+const STAGE_IDS: StageId[] = ["light", "sensor", "readout", "demosaic", "post"];
 
 export function useScrollSpy(): StageId | null {
   const [activeStage, setActiveStage] = useState<StageId | null>(null);

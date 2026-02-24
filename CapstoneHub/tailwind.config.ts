@@ -43,7 +43,8 @@ export default {
         section: {
           light: "hsl(var(--section-light))",
           sensor: "hsl(var(--section-sensor))",
-          "readout-digitization": "hsl(var(--section-readout-digitization))",
+          readout: "hsl(var(--section-readout))",
+          demosaic: "hsl(var(--section-demosaic))",
           post: "hsl(var(--section-post))",
         },
       },

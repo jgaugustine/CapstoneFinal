@@ -1,9 +1,10 @@
-import { Sun, Cpu, Gauge, Palette } from "lucide-react";
+import { Sun, Cpu, Gauge, Grid3X3, Palette } from "lucide-react";
 
 const STAGES = [
   { id: "light", label: "Light", Icon: Sun },
   { id: "sensor", label: "Sensor", Icon: Cpu },
-  { id: "readout-digitization", label: "Readout & Digitization", Icon: Gauge },
+  { id: "readout", label: "Readout", Icon: Gauge },
+  { id: "demosaic", label: "Demosaic", Icon: Grid3X3 },
   { id: "post", label: "Post", Icon: Palette },
 ] as const;
 

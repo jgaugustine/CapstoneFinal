@@ -1,10 +1,11 @@
-// Article content - Vite glob for content/*.md (path is relative to this file: src/lib/articles.ts)
-const articleModules = import.meta.glob<string>("../../content/*.md", { query: "?raw", import: "default" });
+// Article content - Vite glob for content/*.md (relative to project root)
+// Vite glob: paths are from project root (CapstoneHub/)
+const articleModules = import.meta.glob<string>("./content/*.md", { query: "?raw", import: "default" });
 
 const contentCache: Record<string, string> = {};
 
 function slugToPath(slug: string): string {
-  return `../../content/${slug}.md`;
+  return `./content/${slug}.md`;
 }
 
 export async function loadArticle(slug: string): Promise<string> {

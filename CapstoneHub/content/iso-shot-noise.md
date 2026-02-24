@@ -14,4 +14,4 @@ ISO is **analog or digital gain** applied to the signal after the sensor. It doe
 - Prefer **longer shutter** or **wider aperture** when possible to collect more photons.
 - Base ISO typically gives the best SNR when you have enough light.
 
-*Check out the labs to explore quantization and readout effects.*
+*Explore BitDepthVisualizer and PhotonToDigitalConverter to see quantization and readout effects.*
