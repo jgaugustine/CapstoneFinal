@@ -1,3 +1,4 @@
+import { Link } from "react-router-dom";
 import { STAGES } from "@/config/stages";
 import type { StageId } from "@/config/stages";
 import { Header } from "@/components/Header";
@@ -7,14 +8,12 @@ import { PipelineSteps } from "@/components/PipelineSteps";
 import { ForPhotographers } from "@/components/ForPhotographers";
 import { AnimatedSection } from "@/components/AnimatedSection";
 import { useScrollSpy } from "@/hooks/useScrollSpy";
-import { getArticleContent } from "@/lib/articles";
 import { cn } from "@/lib/utils";
 
 const SECTION_BG: Record<StageId, string> = {
   light: "bg-section-light",
   sensor: "bg-section-sensor",
-  readout: "bg-section-readout",
-  demosaic: "bg-section-demosaic",
+  "readout-digitization": "bg-section-readout-digitization",
   post: "bg-section-post",
 };
 
@@ -41,7 +40,7 @@ export default function Index() {
                   Capstone
                 </h1>
                 <p className="text-lg text-muted-foreground leading-relaxed">
-                  Explore the camera signal chain: light, sensor, readout, demosaicing, and post-processing.
+                  Explore the camera signal chain: light, sensor, readout & digitization, and post-processing.
                   Scroll to read articles and find links to interactive labs.
                 </p>
               </header>
@@ -59,21 +58,31 @@ export default function Index() {
             data-stage={stage.id}
             className={cn(SECTION_BG[stage.id], "snap-start min-h-[80vh] py-12 scroll-mt-24")}
           >
-            <div className="w-full max-w-[1200px] mx-auto grid grid-cols-1 lg:grid-cols-[1fr_minmax(0,68ch)_minmax(260px,300px)] gap-x-0 lg:items-start">
-              {/* Left: stage name, right-aligned, staggered reveal */}
-              <AnimatedSection delayMs={0} className="hidden lg:block pt-6 pr-6 self-start sticky top-6">
-                <h2 className="font-mono text-2xl xl:text-3xl font-bold text-foreground text-right">
+            <div className="w-full max-w-[1200px] mx-auto grid grid-cols-1 lg:grid-cols-[minmax(200px,260px)_1fr_minmax(260px,300px)] gap-x-0 lg:items-start">
+              {/* Left: stage name + lab buttons */}
+              <AnimatedSection delayMs={0} className="hidden lg:flex flex-col pt-6 pr-6 self-start sticky top-6">
+                <h2 className="font-mono text-2xl xl:text-3xl font-bold text-foreground text-right mb-4">
                   {stage.label}
                 </h2>
+                {stage.labs.length > 0 && (
+                  <div className="flex flex-col gap-2">
+                    {stage.labs.map((lab) => (
+                      <Link
+                        key={lab.path}
+                        to={lab.path}
+                        className="text-sm font-medium text-primary hover:underline flex items-center gap-2 justify-end"
+                      >
+                        {lab.label}
+                      </Link>
+                    ))}
+                  </div>
+                )}
               </AnimatedSection>
-              {/* Middle: content, staggered reveal */}
+              {/* Middle: takeaways + article cards */}
               <AnimatedSection delayMs={150} className="px-6 md:px-12 lg:px-8">
-                <StageSection
-                  stage={stage}
-                  articleContent={getArticleContent(stage.articleSlug)}
-                />
+                <StageSection stage={stage} />
               </AnimatedSection>
-              {/* Right: For Photographers, staggered reveal */}
+              {/* Right: For Photographers */}
               <AnimatedSection delayMs={300} className="hidden lg:block pt-6 pl-6 pr-8 self-start sticky top-6">
                 <ForPhotographers stage={stage} />
               </AnimatedSection>

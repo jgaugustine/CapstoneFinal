@@ -14,4 +14,4 @@ Cameras are fundamentally photon counters. Light from the scene arrives at the s
 - **Expose to the right (ETTR)**: Maximizing exposure without clipping highlights improves SNR in the shadows.
 - **Exposure triangle**: Shutter, aperture, and ISO together control how much light reaches the sensor and how it is captured.
 
-*Explore ExposureLAB to adjust shutter, aperture, and ISO and see the simulated result.*
+*Check out ExposureLAB to explore the exposure triangle.*

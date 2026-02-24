@@ -1,6 +1,6 @@
 # AE Algorithms: How Auto Exposure Chooses EV
 
-Auto exposure (AE) solves a constrained optimization problem: find the exposure value (EV) that produces the best-looking image within the camera’s limits. Different AE algorithms disagree on what “best” means—some target a midtone, others maximize information, and they differ in how they handle highlight and shadow clipping. This article explains how ExposureLAB implements several AE strategies and turns a chosen EV into camera settings.
+Auto exposure (AE) solves a constrained optimization problem: find the exposure value (EV) that produces the best-looking image within the camera’s limits. Different AE algorithms disagree on what “best” means—some target a midtone, others maximize information, and they differ in how they handle highlight and shadow clipping. This article explains how AE strategies work and how a chosen EV is turned into camera settings.
 
 ## The AE Pipeline at a Glance
 
@@ -72,22 +72,15 @@ Once a target EV is chosen, it must be turned into concrete settings. The alloca
 
 Constraint hits (e.g., shutter_max, iso_max) are recorded so the user sees when the desired EV could not be fully achieved.
 
-## Program Modes and the Lab
+## Program Modes
 
 - **Full AE**: Run the chosen algorithm, allocate, simulate
 - **Av (aperture-priority)**: User sets aperture; AE chooses EV; allocation assigns shutter and ISO
 - **Tv (shutter-priority)**: User sets shutter; AE chooses EV; allocation assigns aperture and ISO
-- **Manual**: User sets all three; the AE explainer still shows what AE would have chosen
+- **Manual**: User sets all three; the AE logic still computes what it would have chosen for reference.
 
-## The Explainability Angle
+## Understanding AE Decisions
 
-ExposureLAB’s AE explainer surfaces the full decision path:
+The full decision path includes the EV sweep, feasible set, chosen EV and reason, and allocation breakdown—helping you see *why* a particular exposure was selected and how it was realized on the exposure triangle.
 
-- EV sweep and per-candidate statistics (clipping, median, entropy)
-- Feasible set and relaxation steps (if any)
-- Chosen EV and reason
-- Allocation breakdown (shutter EV, aperture EV, ISO EV) and constraint hits
-
-This makes it possible to understand *why* a particular exposure was selected and how it was realized on the exposure triangle.
-
-*Explore ExposureLAB to compare algorithms, adjust ηh and ηs, and see how EV choice and allocation change with the scene.*
+*Check out ExposureLAB to explore AE algorithms and see how EV choice and allocation change with the scene.*

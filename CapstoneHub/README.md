@@ -7,29 +7,39 @@ Shell app for the camera pipeline: Light → Sensor → Readout → Demosaicing 
 - **Continuous scroll** — Single page; all stages flow vertically (ready for scroll-triggered animation)
 - **For Photographers** — Guiding questions and key takeaways per stage
 - **Articles** — Markdown content with KaTeX math support
-- **Lab links** — Links to PhotonSimulation, ExposureLAB, DemosaicLab, etc.
+- **Integrated labs** — Photon Simulation, ExposureLAB, BitDepthVisualizer, DemosaicLab, ImageLab run in-app at `/labs/*`
 
 Each section has `id` and `data-stage` attributes for future animation hooks.
 
 ## Development
 
+From the repo root:
+
 ```bash
 npm install
-npm run dev
+npm run dev          # Hub at http://localhost:3000
 ```
 
-Runs at http://localhost:3000
+To develop a specific lab (optional): run its dev server so the hub can proxy to it:
+
+```bash
+npm run dev:exposure   # ExposureLAB at :3001, proxied from /labs/exposure
+npm run dev:bit-depth  # BitDepthVisualizer at :3002
+npm run dev:demosaic   # DemosaicLab at :3003
+npm run dev:image      # ImageLab at :3004
+npm run dev:photon     # PhotonSimulation at :3005
+```
 
 ## Build
 
+From the repo root, builds the hub and all labs into `CapstoneHub/dist/`:
+
 ```bash
 npm run build
-npm run preview
+npm run preview       # Serve from CapstoneHub
 ```
 
-## Lab URLs
-
-Lab links point to `/labs/photon-sim`, `/labs/exposure`, etc. Configure your deployment to serve the lab apps at these paths, or update `src/config/stages.ts` with full URLs.
+Output structure: `CapstoneHub/dist/` (hub) + `CapstoneHub/dist/labs/{exposure,bit-depth,demosaic,image,photon-sim}/` (each lab).
 
 ## Content
 

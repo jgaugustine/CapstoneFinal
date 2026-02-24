@@ -10,34 +10,19 @@ A photograph is made of light from many sources: a bright sky, a shaded face, a 
 
 Under the hood, metering is implemented as a **weight map**: a value for every pixel that sums to 1. Pixels with higher weights contribute more to the luminance statistics that drive auto exposure. The same scene, metered differently, produces a different weighted histogram—and thus a different exposure decision.
 
-## Four Metering Modes in ExposureLAB
+## Four Metering Modes
 
 ### Matrix (Evaluative)
 
-Matrix metering considers the whole frame but gives slightly more importance to the center. In ExposureLAB, the weight falls off with distance from the center:
-
-- Weight = `1 − (distance / maxDistance) × 0.7`
-- Edges contribute less; the center contributes more
-- Normalized so the total weight sum is 1
-
-This mimics evaluative metering on real cameras: the entire frame is used, but the assumption that subjects are often near the center skews the result.
+Matrix metering considers the whole frame but gives slightly more importance to the center. Edges contribute less; the center contributes more. This mimics evaluative metering on real cameras: the entire frame is used, but the assumption that subjects are often near the center skews the result.
 
 ### Center-Weighted
 
-Center-weighted metering strongly favors the middle of the frame. ExposureLAB uses a **radial Gaussian** falloff:
-
-- Weight = `exp(−0.5 × (dx² + dy²))` where `dx`, `dy` are normalized by `σ × width` and `σ × height` (typically σ ≈ 0.3)
-- Pixels near the center have high weight; pixels farther out drop off quickly
-- Useful when the subject is clearly in the center (portraits, products)
+Center-weighted metering strongly favors the middle of the frame. Pixels near the center have high weight; pixels farther out drop off quickly. Useful when the subject is clearly in the center (portraits, products).
 
 ### Spot
 
-Spot metering measures only a small region—in ExposureLAB, a circular spot at the center with a configurable radius (e.g., 50 pixels). Inside the spot:
-
-- Weight uses a Gaussian falloff from the center of the circle
-- Outside the radius, weight is zero
-
-Spot is ideal when you know exactly what to expose for: a face, a bird in a tree, a backlit subject. The rest of the frame is ignored.
+Spot metering measures only a small region—typically a circular spot centered on the focus point. Inside the spot, pixels get weight; outside, weight is zero. Spot is ideal when you know exactly what to expose for: a face, a bird in a tree, a backlit subject. The rest of the frame is ignored.
 
 ### Subject-Based
 
@@ -76,4 +61,4 @@ So metering defines the *region of interest*; the AE algorithm defines *how* tha
 - **Spot**: When you have a clear target (focus point, face) and the rest of the scene is irrelevant or misleading.
 - **Subject-based**: When you have segmentation and want the camera to prioritize the detected subject.
 
-*Explore ExposureLAB to switch metering modes, see how the weight map affects the histogram, and watch the exposure decision change.*
+*Check out ExposureLAB to explore metering for yourself.*
