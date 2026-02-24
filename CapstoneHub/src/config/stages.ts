@@ -68,7 +68,7 @@ export const STAGES: StageConfig[] = [
       "Different CFA patterns → different sharpness/artifact tradeoffs",
       "In practice, processing matters more than sensor brand",
     ],
-    articleSlug: "demosaicing",
+    articleSlug: "cfa",
     labs: [{ label: "DemosaicLab", path: "/labs/demosaic" }],
   },
   {
