@@ -4,6 +4,12 @@
 # Lockfiles — let each platform generate its own to get correct native binaries
 **/package-lock.json
 
+# Build output from lab repos (rebuilt during deploy)
+BitDepthVisualizer/dist/
+ImageLab/dist/
+PhotonSimulation/dist/
+DemosaicLab/dist/
+
 # Local documentation not to be committed
 ImageLABProjectDocumentation.md
 @ImageLABProjectDocumentation.md
