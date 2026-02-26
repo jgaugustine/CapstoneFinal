@@ -1,0 +1,16 @@
+title: Capstone
+theme: jekyll-theme-primer
+
+# Prevent Jekyll (and GitHub Pages) from processing app projects and node_modules.
+exclude:
+  - node_modules
+  - BitDepthVisualizer
+  - DemosaicLab
+  - ExposureLAB
+  - ImageLab
+  - PhotonSimulation
+  - CapstoneHub
+  - scripts
+  - package.json
+  - package-lock.json
+
