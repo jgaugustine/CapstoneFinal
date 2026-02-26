@@ -2,12 +2,7 @@
   "name": "capstone",
   "private": true,
   "workspaces": [
-    "CapstoneHub",
-    "ExposureLAB",
-    "BitDepthVisualizer",
-    "DemosaicLab",
-    "ImageLab",
-    "PhotonSimulation"
+    "CapstoneHub"
   ],
   "scripts": {
     "dev": "npm run dev --workspace=CapstoneHub",
