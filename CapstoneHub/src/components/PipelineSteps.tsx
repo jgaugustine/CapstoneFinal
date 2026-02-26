@@ -1,11 +1,20 @@
 import { cn } from "@/lib/utils";
 import { STAGES } from "@/config/stages";
 import type { StageId } from "@/config/stages";
+import type { MouseEvent } from "react";
 
 interface PipelineStepsProps {
   activeStage: StageId | null;
   orientation?: "vertical" | "horizontal";
   className?: string;
+}
+
+function handleStageClick(event: MouseEvent<HTMLAnchorElement>, id: StageId) {
+  event.preventDefault();
+  const target = document.getElementById(id);
+  if (target) {
+    target.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
 }
 
 export function PipelineSteps({ activeStage, orientation = "vertical", className }: PipelineStepsProps) {
@@ -25,6 +34,7 @@ export function PipelineSteps({ activeStage, orientation = "vertical", className
           <a
             key={stage.id}
             href={`#${stage.id}`}
+            onClick={(event) => handleStageClick(event, stage.id)}
             className={cn(
               "flex items-center gap-3 rounded-md px-2 py-2 text-sm font-medium transition-colors",
               isActive

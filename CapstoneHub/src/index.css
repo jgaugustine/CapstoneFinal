@@ -4,27 +4,30 @@
 
 @layer base {
   :root {
-    --background: 220 45% 8%;
-    --foreground: 0 0% 98%;
-    --card: 220 40% 12%;
-    --card-foreground: 0 0% 98%;
-    --primary: 185 100% 50%;
-    --primary-foreground: 220 45% 8%;
-    --secondary: 0 85% 65%;
-    --secondary-foreground: 0 0% 98%;
-    --muted: 220 35% 18%;
-    --muted-foreground: 220 15% 60%;
-    --accent: 185 100% 50%;
-    --accent-foreground: 220 45% 8%;
-    --border: 220 35% 20%;
-    --input: 220 35% 15%;
-    --ring: 185 100% 50%;
+    /* Base: warm dark with subtle blue undertone */
+    --background: 224 28% 9%;
+    --foreground: 210 20% 98%;
+    --card: 224 26% 13%;
+    --card-foreground: 210 20% 98%;
+    /* Primary: refined teal (softer than neon cyan) */
+    --primary: 172 76% 48%;
+    --primary-foreground: 224 28% 9%;
+    /* Secondary: cool cyan accent (no brown/orange cast) */
+    --secondary: 190 90% 55%;
+    --secondary-foreground: 224 28% 9%;
+    --muted: 224 22% 18%;
+    --muted-foreground: 218 18% 65%;
+    --accent: 172 76% 48%;
+    --accent-foreground: 224 28% 9%;
+    --border: 224 24% 22%;
+    --input: 224 24% 16%;
+    --ring: 172 76% 48%;
     --radius: 0.5rem;
-    --section-light: 30 55% 16%;
-    --section-sensor: 220 55% 14%;
-    --section-readout: 250 50% 14%;
-    --section-demosaic: 165 45% 15%;
-    --section-post: 15 50% 16%;
+    /* Section tints: cool, no brown tones */
+    --section-light: 205 32% 15%;
+    --section-sensor: 218 42% 14%;
+    --section-readout-demosaic: 258 38% 15%;
+    --section-post: 232 30% 15%;
   }
 }
 

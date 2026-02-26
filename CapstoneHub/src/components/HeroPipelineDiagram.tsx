@@ -3,10 +3,16 @@ import { Sun, Cpu, Gauge, Grid3X3, Palette } from "lucide-react";
 const STAGES = [
   { id: "light", label: "Light", Icon: Sun },
   { id: "sensor", label: "Sensor", Icon: Cpu },
-  { id: "readout", label: "Readout", Icon: Gauge },
-  { id: "demosaic", label: "Demosaic", Icon: Grid3X3 },
+  { id: "readout-demosaic", label: "Digitization & Demosaic", Icon: Gauge },
   { id: "post", label: "Post", Icon: Palette },
 ] as const;
+
+function scrollToStage(id: string) {
+  const target = document.getElementById(id);
+  if (target) {
+    target.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+}
 
 export function HeroPipelineDiagram() {
   return (
@@ -17,7 +23,11 @@ export function HeroPipelineDiagram() {
       <div className="flex items-center justify-between gap-2 md:gap-4">
         {STAGES.map((stage, i) => (
           <div key={stage.id} className="flex flex-1 items-center">
-            <div className="group flex flex-1 flex-col items-center gap-2">
+            <button
+              type="button"
+              onClick={() => scrollToStage(stage.id)}
+              className="group flex flex-1 flex-col items-center gap-2 focus:outline-none"
+            >
               <div
                 className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg border border-border/60 bg-muted/30 transition-colors group-hover:border-primary/50 group-hover:bg-primary/10 md:h-14 md:w-14"
                 aria-hidden
@@ -27,7 +37,7 @@ export function HeroPipelineDiagram() {
               <span className="text-center font-mono text-[10px] font-medium uppercase tracking-wider text-muted-foreground md:text-xs">
                 {stage.label}
               </span>
-            </div>
+            </button>
             {i < STAGES.length - 1 && (
               <div
                 className="hidden shrink-0 flex-1 md:block"

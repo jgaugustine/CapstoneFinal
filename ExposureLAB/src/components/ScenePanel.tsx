@@ -121,7 +121,7 @@ export function ScenePanel({
     });
   };
   return (
-    <Card>
+    <Card data-tour-id="scene-panel">
       <CardHeader>
         <div className="flex items-center justify-between gap-2">
           <CardTitle>Scene</CardTitle>

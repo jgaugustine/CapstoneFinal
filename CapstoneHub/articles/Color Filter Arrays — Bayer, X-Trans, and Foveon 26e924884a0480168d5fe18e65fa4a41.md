@@ -1,10 +1,5 @@
 # Color Filter Arrays — Bayer, X-Trans, and Foveon
 
-Description: Pixels measure intensity; CFAs spatially sample color channels. Compares Bayer’s 2G:1R:1B layout (better luminance detail) with alternatives (X-Trans patterning, Foveon vertical stacking), and explains spectral response trade-offs.
-Implementing?: Yes
-Status: Writing
-🎓 HC/LO Tracker: #modeling (https://www.notion.so/modeling-1b0924884a0481578121d1d08be9010f?pvs=21)
-
 Camera sensors are colorblind. The photosites count photons. It doesn't distinguish between red, green, or blue light. They all register the same to silicon. So how does your camera create a color photograph from a device that only measures brightness?
 
 When light hits a sensor, each photosite accumulates electrons. More light generates more electrons. That's the only information available. The sensor records how many photons arrived, but has no information about what color they were.

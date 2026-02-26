@@ -42,8 +42,26 @@ import { MeteringPanel } from '@/components/MeteringPanel';
 import { TelemetryPanel } from '@/components/TelemetryPanel';
 import { ScenePanel } from '@/components/ScenePanel';
 import { SIM_PRESETS } from '@/constants/simPresets';
+import { TutorialEvent, TutorialStep } from '@/config/tutorialSteps';
 
-export default function Lab() {
+interface LabTutorialProps {
+  active: boolean;
+  completed: boolean;
+  currentStepId: TutorialStep["id"] | null;
+  onEvent: (event: TutorialEvent) => void;
+  start: () => void;
+  skip: () => void;
+  next: () => void;
+  back: () => void;
+  complete: () => void;
+  goToStep: (id: TutorialStep["id"]) => void;
+}
+
+interface LabProps {
+  tutorial?: LabTutorialProps;
+}
+
+export default function Lab({ tutorial }: LabProps) {
   const [scene, setScene] = useState<SceneState | null>(null);
   const [mode, setMode] = useState<'manual' | 'ae'>('manual');
   const [programMode, setProgramMode] = useState<CameraProgramMode>('manual');
@@ -134,13 +152,14 @@ export default function Lab() {
           ? snapMetadataToSliderValues(exposureMetadata, constraints)
           : { shutterSeconds: 1 / 60, aperture: 2.8, iso: 100 }
       );
+      tutorial?.onEvent('image-loaded');
     } catch (error) {
       console.error('Failed to load image:', error);
       alert('Failed to load image. Please try another file.');
     } finally {
       setIsImageUploading(false);
     }
-  }, []);
+  }, [tutorial]);
 
   // Run forward simulation (sync)
   const runSimulationSync = useCallback((settings: CameraSettings): SimOutput | null => {
@@ -263,7 +282,8 @@ export default function Lab() {
       setAllocatedSettings(newSettings);
       runSimulationDeferred(newSettings);
     });
-  }, [programMode, runAEForTargetEV, runSimulationDeferred]);
+    tutorial?.onEvent('ae-run');
+  }, [programMode, runAEForTargetEV, runSimulationDeferred, tutorial]);
 
   // Base (scene) luminance for telemetry/histograms: metering image at EV=0 (masks + illumination applied)
   const sceneLuminance = useMemo(() => {
@@ -324,7 +344,7 @@ export default function Lab() {
         <Tabs value={mode} onValueChange={(value) => setMode(value as 'manual' | 'ae')}>
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 mt-6">
             {/* Left: Telemetry + Camera settings */}
-            <div className="lg:col-span-3 space-y-6">
+            <div className="lg:col-span-3 space-y-6" data-tour-id="camera-mode-panel">
               <TelemetryPanel
                 telemetry={telemetry}
                 sceneLuminance={sceneLuminance}
@@ -333,7 +353,10 @@ export default function Lab() {
 
               <ManualModePanel
                 settings={manualSettings}
-                onSettingsChange={setManualSettings}
+                onSettingsChange={(next) => {
+                  setManualSettings(next);
+                  tutorial?.onEvent('settings-changed');
+                }}
                 exposureMetadata={scene?.exposureMetadata}
                 mode={mode}
                 onModeChange={(value) => setMode(value)}
@@ -347,10 +370,13 @@ export default function Lab() {
               {/* Metering mode - affects telemetry */}
               <MeteringPanel
                 meteringMode={meteringMode}
-                onMeteringModeChange={setMeteringMode}
+                onMeteringModeChange={(mode) => {
+                  setMeteringMode(mode);
+                  tutorial?.onEvent('metering-changed');
+                }}
               />
 
-              <Card>
+              <Card data-tour-id="sim-output">
                 <CardHeader>
                   <div className="flex items-center justify-between">
                     <CardTitle>Simulated output</CardTitle>
@@ -399,7 +425,7 @@ export default function Lab() {
           </div>
 
           {/* AE details span full width at the bottom in AE mode */}
-          <TabsContent value="ae" className="mt-6">
+          <TabsContent value="ae" className="mt-6" data-tour-id="ae-panel">
             <AEModePanel
               priorities={aePriorities}
               onPrioritiesChange={setAEPriorities}

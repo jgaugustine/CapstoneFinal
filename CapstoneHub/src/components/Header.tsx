@@ -1,5 +1,15 @@
 import { useScrollSpy } from "@/hooks/useScrollSpy";
 import { STAGES } from "@/config/stages";
+import type { StageId } from "@/config/stages";
+import type { MouseEvent } from "react";
+
+function handleStageClick(event: MouseEvent<HTMLAnchorElement>, id: StageId) {
+  event.preventDefault();
+  const target = document.getElementById(id);
+  if (target) {
+    target.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+}
 
 export function Header() {
   const activeStage = useScrollSpy();
@@ -30,6 +40,7 @@ export function Header() {
               <a
                 key={stage.id}
                 href={`#${stage.id}`}
+                onClick={(event) => handleStageClick(event, stage.id)}
                 className={`
                   group flex items-center gap-0.5 transition-all duration-300
                   ${i < STAGES.length - 1 ? "pr-0.5" : ""}

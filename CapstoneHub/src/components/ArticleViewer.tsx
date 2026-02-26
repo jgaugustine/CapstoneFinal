@@ -15,9 +15,11 @@ export function ArticleViewer({ content, className }: ArticleViewerProps) {
   return (
     <article
       className={cn(
-        "prose prose-invert prose-sm max-w-none",
+        "prose prose-invert max-w-none",
         "prose-headings:font-mono prose-headings:font-semibold",
-        "prose-p:text-muted-foreground prose-p:leading-relaxed",
+        // Make article body text brighter and higher contrast than the rest of the UI
+        "prose-p:text-foreground prose-p:leading-relaxed",
+        "prose-li:text-foreground",
         "prose-a:text-primary prose-a:no-underline hover:prose-a:underline",
         "prose-code:bg-muted prose-code:px-1 prose-code:py-0.5 prose-code:rounded prose-code:text-sm",
         "prose-pre:bg-muted prose-pre:border prose-pre:border-border",

@@ -1,16 +1,35 @@
-// Article content - Vite glob for content/*.md (relative to project root)
-// Vite glob: paths are from project root (CapstoneHub/)
-const articleModules = import.meta.glob<string>("./content/*.md", { query: "?raw", import: "default" });
+// Article content - Vite glob for long-form articles in /articles
+const articleModules = import.meta.glob<string>("../../articles/*.md", {
+  query: "?raw",
+  import: "default",
+});
 
 const contentCache: Record<string, string> = {};
 
-function slugToPath(slug: string): string {
-  return `./content/${slug}.md`;
-}
+// Map short slugs used in the app to specific article files
+const SLUG_TO_PATH: Record<string, string> = {
+  "light-to-image":
+    "../../articles/Light → Image — Cameras as Photon Counters 26e924884a0480f68be7fd04b52941af.md",
+  metering:
+    "../../articles/Exposure Value & Metering 26e924884a0480f3b22df35a10330897.md",
+  "ae-algorithms":
+    "../../articles/Exposure Programs — AE, Shutter, Aperture Priority 26f924884a0480fdb672ef956ac03f44.md",
+  "pixels-wells":
+    "../../articles/Pixels, Wells, and Readout — Architecture and Limi 26e924884a0480d28f7fc4ec4be2f47f.md",
+  "iso-shot-noise":
+    "../../articles/ISO, Shot Noise, SNR — Why Raising ISO Makes Noise 26e924884a048001b0e8d3b028cafb08.md",
+  demosaicing:
+    "../../articles/Demosaicing 26e924884a0480f8be17f2d3debeda46.md",
+  "bit-depth":
+    "../../articles/Bit Depth & Dynamic Range— How Many Shades Can We  26e924884a048034b3a8c1863022b03e.md",
+  "cfa-full":
+    "../../articles/Color Filter Arrays — Bayer, X-Trans, and Foveon 26e924884a0480168d5fe18e65fa4a41.md",
+};
 
 export async function loadArticle(slug: string): Promise<string> {
   if (contentCache[slug]) return contentCache[slug];
-  const path = slugToPath(slug);
+  const path = SLUG_TO_PATH[slug];
+  if (!path) return getPlaceholder(slug);
   const loader = articleModules[path];
   if (loader) {
     const content = await loader();
@@ -69,6 +88,16 @@ How AE algorithms choose shutter, aperture, and ISO.
     "post-processing": `# Post-processing
 
 Tone mapping, color correction, and editing after capture.
+
+*Full article coming soon.*`,
+    "ae-algorithms": `# Exposure Programs: AE, Shutter, Aperture Priority
+
+How auto exposure chooses EV and splits it across the exposure triangle.
+
+*Full article coming soon.*`,
+    "cfa-full": `# Color Filter Arrays: Bayer, X-Trans, and Foveon
+
+Different CFA patterns affect color reproduction and sharpness.
 
 *Full article coming soon.*`,
   };

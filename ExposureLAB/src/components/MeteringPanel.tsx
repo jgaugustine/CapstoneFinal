@@ -13,7 +13,7 @@ export function MeteringPanel({
   onMeteringModeChange,
 }: MeteringPanelProps) {
   return (
-    <Card>
+    <Card data-tour-id="metering-panel">
       <CardHeader>
         <CardTitle>Metering Mode</CardTitle>
         <CardDescription>
