@@ -38,6 +38,16 @@ if (!existsSync(labsDir)) mkdirSync(labsDir, { recursive: true });
 
 for (const lab of LABS) {
   const labPath = join(ROOT, lab.path);
+  const labPkg = join(labPath, "package.json");
+  if (!existsSync(labPath) || !existsSync(labPkg)) {
+    console.log(`\nSkipping ${lab.name} (directory or package.json not found)`);
+    continue;
+  }
+  const labNodeModules = join(labPath, "node_modules");
+  if (!existsSync(labNodeModules)) {
+    console.log(`\nInstalling deps for ${lab.name}...`);
+    run("npm", ["install"], labPath);
+  }
   const outDir = join(labsDir, lab.slug);
   const base = `/labs/${lab.slug}/`;
   console.log(`\nBuilding ${lab.name} → ${base}`);
