@@ -1,13 +1,16 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useCallback } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Upload, Layers } from "lucide-react";
+import { Upload, Layers, HelpCircle } from "lucide-react";
 import { ImageCanvas } from "@/components/ImageCanvas";
 import { MathExplanation } from "@/components/MathExplanation";
 import { TransformationType, RGB, BlurParams, SharpenParams, EdgeParams, DenoiseParams, CustomConvParams, defaultParamsFor } from "@/types/transformations";
 import { AdjustmentLayer } from "@/components/AdjustmentLayer";
 import { downsizeImageToDataURL } from "@/lib/imageResize";
 import { FilterInstance } from "@/types/transformations";
+import { TutorialTour } from "@/components/TutorialTour";
+import { tutorialSteps, getFirstTutorialStepId } from "@/config/tutorialSteps";
+import type { TutorialStep } from "@/config/tutorialSteps";
 
 interface IndexProps {
   // Instance-based pipeline (introduced at App level)
@@ -44,6 +47,34 @@ export default function Index(_props: IndexProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const CanvasAny = ImageCanvas as any;
   const MathAny = MathExplanation as any;
+
+  // Tutorial tour state
+  const TOUR_SEEN_KEY = "imagelab:tour-seen";
+  const [tourStepId, setTourStepId] = useState<TutorialStep["id"] | null>(() => {
+    if (typeof sessionStorage !== "undefined" && sessionStorage.getItem(TOUR_SEEN_KEY)) return null;
+    return getFirstTutorialStepId();
+  });
+
+  const advanceTour = useCallback(() => {
+    setTourStepId((prev) => {
+      const idx = tutorialSteps.findIndex((s) => s.id === prev);
+      if (idx === -1 || idx >= tutorialSteps.length - 1) return null;
+      return tutorialSteps[idx + 1].id;
+    });
+  }, []);
+
+  const backTour = useCallback(() => {
+    setTourStepId((prev) => {
+      const idx = tutorialSteps.findIndex((s) => s.id === prev);
+      if (idx <= 0) return prev;
+      return tutorialSteps[idx - 1].id;
+    });
+  }, []);
+
+  const closeTour = useCallback(() => {
+    setTourStepId(null);
+    try { sessionStorage.setItem(TOUR_SEEN_KEY, "1"); } catch {}
+  }, []);
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -65,18 +96,39 @@ export default function Index(_props: IndexProps) {
     }
   };
   return <div className="min-h-screen bg-background p-6">
+      <TutorialTour
+        steps={tutorialSteps}
+        currentStepId={tourStepId}
+        onNext={advanceTour}
+        onBack={backTour}
+        onSkip={closeTour}
+        onComplete={closeTour}
+      />
       <div className="max-w-7xl mx-auto space-y-6">
         <header className="text-center space-y-2">
-          <h1 className="text-4xl font-bold text-foreground">
-        </h1>
+          <div className="flex items-center justify-center gap-3">
+            <h1 className="text-4xl font-bold text-foreground">ImageLab</h1>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                try { sessionStorage.removeItem(TOUR_SEEN_KEY); } catch {}
+                setTourStepId(getFirstTutorialStepId());
+              }}
+              title="Start tour"
+            >
+              <HelpCircle className="w-5 h-5" />
+            </Button>
+          </div>
           <p className="text-muted-foreground">
-        </p>
+            Apply image transformations and see the math behind each operation in real time.
+          </p>
         </header>
 
         <div className="grid lg:grid-cols-2 gap-6">
           {/* Left Panel - Image & Controls */}
           <div className="space-y-6">
-            <Card className="p-6 border-border bg-card">
+            <Card className="p-6 border-border bg-card" data-tour-id="image-preview">
               <div className="mb-4 flex items-center justify-between gap-2">
                 <h2 className="text-xl font-semibold text-primary flex items-center gap-2">
                   <Upload className="w-5 h-5" />
@@ -88,6 +140,7 @@ export default function Index(_props: IndexProps) {
                   className="shrink-0"
                   variant={dechanneled ? "default" : "outline"}
                   onClick={() => setDechanneled(!dechanneled)}
+                  data-tour-id="dechannel-btn"
                   aria-pressed={dechanneled}
                 >
                   <Layers className="w-4 h-4 mr-2" />
@@ -132,7 +185,7 @@ export default function Index(_props: IndexProps) {
                 </div> : <div className="aspect-video w-full overflow-hidden"><CanvasAny key={dechanneled ? 'dechanneled' : 'normal'} image={image} pipeline={_props.pipeline} onSelectInstance={_props.setSelectedInstanceId} selectedInstanceId={_props.selectedInstanceId ?? null} brightness={brightness} contrast={contrast} saturation={saturation} hue={hue} whites={whites} blacks={blacks} linearSaturation={linearSaturation} vibrance={vibrance} transformOrder={transformOrder} onPixelSelect={setSelectedRGB} onSelectConvAnalysis={setConvAnalysis} previewOriginal={previewOriginal} dechanneled={dechanneled} /></div>}
             </Card>
 
-            <Card className="p-6 border-border bg-card">
+            <Card className="p-6 border-border bg-card" data-tour-id="transform-controls">
               <h2 className="text-xl font-semibold text-primary mb-6">Transformation Controls</h2>
               
               <AdjustmentLayer
@@ -261,7 +314,7 @@ export default function Index(_props: IndexProps) {
           </div>
 
           {/* Right Panel - Mathematical Explanation */}
-          <div className="space-y-6">
+          <div className="space-y-6" data-tour-id="math-panel">
             <MathAny
               brightness={brightness}
               contrast={contrast}
