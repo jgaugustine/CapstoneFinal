@@ -46,9 +46,10 @@ for (const lab of LABS) {
   const labNodeModules = join(labPath, "node_modules");
   if (!existsSync(labNodeModules)) {
     console.log(`\nInstalling deps for ${lab.name}...`);
-    run("npm", ["install"], labPath);
-    run("npm", ["rebuild", "esbuild"], labPath);
+    run("npm", ["install", "--ignore-scripts"], labPath);
   }
+  console.log(`\nRebuilding native binaries for ${lab.name}...`);
+  run("npm", ["rebuild"], labPath);
   const outDir = join(labsDir, lab.slug);
   const base = `/labs/${lab.slug}/`;
   console.log(`\nBuilding ${lab.name} → ${base}`);
