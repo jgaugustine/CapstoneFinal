@@ -4,7 +4,7 @@
  * Labs are built with base /labs/<slug>/ and output to CapstoneHub/dist/labs/<slug>/
  */
 import { spawnSync } from "child_process";
-import { existsSync, mkdirSync } from "fs";
+import { existsSync, mkdirSync, rmSync, unlinkSync } from "fs";
 import { dirname, join } from "path";
 import { fileURLToPath } from "url";
 
@@ -49,17 +49,23 @@ for (const lab of LABS) {
     continue;
   }
   const labNodeModules = join(labPath, "node_modules");
-  if (!existsSync(labNodeModules)) {
-    console.log(`\nInstalling deps for ${lab.name}...`);
-    run("npm", ["install"], labPath);
-  }
+  const labLock = join(labPath, "package-lock.json");
+
+  // Always do a clean install: remove stale node_modules and lockfile
+  // so npm resolves a consistent dependency tree for this platform.
+  if (existsSync(labNodeModules)) rmSync(labNodeModules, { recursive: true, force: true });
+  if (existsSync(labLock)) unlinkSync(labLock);
+
+  console.log(`\nInstalling deps for ${lab.name}...`);
+  run("npm", ["install", "--no-package-lock"], labPath);
+
   const outDir = join(labsDir, lab.slug);
   const base = `/labs/${lab.slug}/`;
   console.log(`\nBuilding ${lab.name} → ${base}`);
-  const localVite = join(labNodeModules, ".bin", "vite");
-  const esbuildBin = join(labNodeModules, "@esbuild", `${process.platform}-${process.arch}`, "bin", "esbuild");
-  const env = existsSync(esbuildBin) ? { ESBUILD_BINARY_PATH: esbuildBin } : {};
-  run(localVite, ["build", "--base", base, "--outDir", outDir], labPath, env);
+  run("node", [
+    join(labNodeModules, "vite", "bin", "vite.js"),
+    "build", "--base", base, "--outDir", outDir,
+  ], labPath);
 }
 
 console.log("\n✓ All builds complete. Output: CapstoneHub/dist/");
