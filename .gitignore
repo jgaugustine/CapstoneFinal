@@ -1,6 +1,9 @@
+# Dependencies
+**/node_modules/
+
+# Lockfiles — let each platform generate its own to get correct native binaries
+**/package-lock.json
+
 # Local documentation not to be committed
 ImageLABProjectDocumentation.md
 @ImageLABProjectDocumentation.md
-
-node_modules
-node_modules
