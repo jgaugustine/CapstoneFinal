@@ -20,8 +20,13 @@ const LABS = [
   { name: "PhotonSimulation", path: "PhotonSimulation", slug: "photon-sim" },
 ];
 
-function run(cmd, args, cwd = ROOT) {
-  const r = spawnSync(cmd, args, { cwd, stdio: "inherit", shell: true });
+function run(cmd, args, cwd = ROOT, env = {}) {
+  const r = spawnSync(cmd, args, {
+    cwd,
+    stdio: "inherit",
+    shell: true,
+    env: { ...process.env, ...env },
+  });
   if (r.status !== 0) process.exit(r.status ?? 1);
 }
 
@@ -51,7 +56,10 @@ for (const lab of LABS) {
   const outDir = join(labsDir, lab.slug);
   const base = `/labs/${lab.slug}/`;
   console.log(`\nBuilding ${lab.name} → ${base}`);
-  run("npx", ["vite", "build", "--base", base, "--outDir", outDir], labPath);
+  const localVite = join(labNodeModules, ".bin", "vite");
+  const esbuildBin = join(labNodeModules, "@esbuild", `${process.platform}-${process.arch}`, "bin", "esbuild");
+  const env = existsSync(esbuildBin) ? { ESBUILD_BINARY_PATH: esbuildBin } : {};
+  run(localVite, ["build", "--base", base, "--outDir", outDir], labPath, env);
 }
 
 console.log("\n✓ All builds complete. Output: CapstoneHub/dist/");
