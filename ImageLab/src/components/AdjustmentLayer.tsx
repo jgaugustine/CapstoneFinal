@@ -44,6 +44,7 @@ interface AdjustmentLayerProps {
   onInstanceSelect?: (instanceId: string) => void;
   activeTab?: string;
   image?: HTMLImageElement | null;
+  highlightConvolutionOptions?: boolean;
 }
 
 const getIcon = (type: TransformationType) => {
@@ -173,7 +174,7 @@ export function AdjustmentLayer(props: AdjustmentLayerProps) {
         {onAddInstance && (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="default" className="gap-2">
+              <Button variant="default" className="gap-2" data-tour-id="add-adjustment-btn">
                 <Plus className="w-4 h-4" />
                 New Adjustment
               </Button>
@@ -189,11 +190,36 @@ export function AdjustmentLayer(props: AdjustmentLayerProps) {
               <DropdownMenuItem onClick={() => onAddInstance('whites')}>Whites</DropdownMenuItem>
               <DropdownMenuItem onClick={() => onAddInstance('blacks')}>Blacks</DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={() => onAddInstance('blur')}>Blur</DropdownMenuItem>
-              <DropdownMenuItem onClick={() => onAddInstance('sharpen')}>Sharpen</DropdownMenuItem>
-              <DropdownMenuItem onClick={() => onAddInstance('denoise')}>Denoise</DropdownMenuItem>
-              <DropdownMenuItem onClick={() => onAddInstance('edge')}>Edge Detect</DropdownMenuItem>
-              <DropdownMenuItem onClick={() => onAddInstance('customConv')}>Custom Convolution</DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => onAddInstance('blur')}
+                className={props.highlightConvolutionOptions ? "bg-primary/15 border-l-2 border-primary" : undefined}
+              >
+                Blur
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => onAddInstance('sharpen')}
+                className={props.highlightConvolutionOptions ? "bg-primary/15 border-l-2 border-primary" : undefined}
+              >
+                Sharpen
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => onAddInstance('denoise')}
+                className={props.highlightConvolutionOptions ? "bg-primary/15 border-l-2 border-primary" : undefined}
+              >
+                Denoise
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => onAddInstance('edge')}
+                className={props.highlightConvolutionOptions ? "bg-primary/15 border-l-2 border-primary" : undefined}
+              >
+                Edge Detect
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => onAddInstance('customConv')}
+                className={props.highlightConvolutionOptions ? "bg-primary/15 border-l-2 border-primary" : undefined}
+              >
+                Custom Convolution
+              </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         )}
@@ -207,7 +233,7 @@ export function AdjustmentLayer(props: AdjustmentLayerProps) {
       >
         {props.pipeline ? (
           <SortableContext items={props.pipeline.map(p => p.id)} strategy={verticalListSortingStrategy}>
-            <div className="space-y-3">
+            <div className="space-y-3" data-tour-id="layer-list">
               {props.pipeline.map((inst, index) => {
                 const kind = inst.kind;
                 const isVector: boolean = (kind === 'brightness' || kind === 'contrast' || kind === 'saturation' || kind === 'vibrance' || kind === 'hue' || kind === 'whites' || kind === 'blacks');
@@ -270,7 +296,7 @@ export function AdjustmentLayer(props: AdjustmentLayerProps) {
           </SortableContext>
         ) : (
           <SortableContext items={transformOrder} strategy={verticalListSortingStrategy}>
-            <div className="space-y-3">
+            <div className="space-y-3" data-tour-id="layer-list">
               {transformOrder.map((type, index) => {
                 const config = getTransformConfig(type);
                 const value = getValue(type, rest);

@@ -124,7 +124,8 @@ export function ExposureTriangle({ settings, className = '' }: ExposureTriangleP
   );
   const EV_FIT_THRESHOLD = 14;
   const evPopsOut = minDistToEdge < EV_FIT_THRESHOLD;
-  const evLabelOffset = 22;
+  // When triangle is small, move EV text further outside; scale offset with how cramped it is
+  const evLabelOffset = 22 + (evPopsOut ? Math.max(0, EV_FIT_THRESHOLD - minDistToEdge) : 0);
 
   // Side midpoints (each setting labels the side it controls)
   const baseMid = { x: (bottomLeft.x + bottomRight.x) / 2, y: (bottomLeft.y + bottomRight.y) / 2 };

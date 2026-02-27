@@ -560,7 +560,18 @@ const PhotonSimulator: React.FC = () => {
   // Using DistributionPanel instead of inline histogram
 
   return (
-    <div className="min-h-screen bg-background p-6">
+    <div className="min-h-screen bg-background flex flex-col">
+      <header className="shrink-0 border-b bg-background px-4 py-2">
+        <div className="flex items-center gap-2">
+          <a
+            href="/"
+            className="text-sm text-muted-foreground hover:text-foreground"
+          >
+            ← Back to Capstone
+          </a>
+        </div>
+      </header>
+      <div className="flex-1 p-6">
       <div className="max-w-7xl mx-auto">
         <header className="text-center mb-8">
           <h1 className="text-4xl font-bold text-foreground mb-2">
@@ -957,6 +968,7 @@ const PhotonSimulator: React.FC = () => {
           </Card>
         </div>
         </div>
+      </div>
       </div>
     </div>
   );

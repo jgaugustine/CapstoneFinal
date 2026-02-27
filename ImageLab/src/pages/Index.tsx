@@ -1,7 +1,7 @@
 import { useState, useRef, useCallback } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Upload, Layers, HelpCircle } from "lucide-react";
+import { Upload, Layers } from "lucide-react";
 import { ImageCanvas } from "@/components/ImageCanvas";
 import { MathExplanation } from "@/components/MathExplanation";
 import { TransformationType, RGB, BlurParams, SharpenParams, EdgeParams, DenoiseParams, CustomConvParams, defaultParamsFor } from "@/types/transformations";
@@ -75,6 +75,19 @@ export default function Index(_props: IndexProps) {
     setTourStepId(null);
     try { sessionStorage.setItem(TOUR_SEEN_KEY, "1"); } catch {}
   }, []);
+
+  const advanceTourOn = useCallback((event: import("@/config/tutorialSteps").TutorialEvent) => {
+    setTourStepId((prev) => {
+      if (!prev) return prev;
+      const step = tutorialSteps.find((s) => s.id === prev);
+      if (step?.advanceOn === event) {
+        const idx = tutorialSteps.findIndex((s) => s.id === prev);
+        if (idx >= 0 && idx < tutorialSteps.length - 1) return tutorialSteps[idx + 1].id;
+        return null;
+      }
+      return prev;
+    });
+  }, []);
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -82,7 +95,10 @@ export default function Index(_props: IndexProps) {
     try {
       const dataUrl = await downsizeImageToDataURL(file, 2048, 0.85);
       const img = new Image();
-      img.onload = () => setImage(img);
+      img.onload = () => {
+        setImage(img);
+        advanceTourOn("image-loaded");
+      };
       img.src = dataUrl;
     } catch (err) {
       // Fallback to original file if resize fails
@@ -95,7 +111,7 @@ export default function Index(_props: IndexProps) {
       reader.readAsDataURL(file);
     }
   };
-  return <div className="min-h-screen bg-background p-6">
+  return <div className="min-h-screen bg-background flex flex-col">
       <TutorialTour
         steps={tutorialSteps}
         currentStepId={tourStepId}
@@ -104,22 +120,32 @@ export default function Index(_props: IndexProps) {
         onSkip={closeTour}
         onComplete={closeTour}
       />
-      <div className="max-w-7xl mx-auto space-y-6">
-        <header className="text-center space-y-2">
-          <div className="flex items-center justify-center gap-3">
-            <h1 className="text-4xl font-bold text-foreground">ImageLab</h1>
-            <Button
-              variant="ghost"
-              size="sm"
+      <header className="shrink-0 border-b bg-background px-4 py-2">
+        <div className="flex items-center gap-2">
+          <a
+            href="/"
+            className="text-sm text-muted-foreground hover:text-foreground"
+          >
+            ← Back to Capstone
+          </a>
+          <div className="ml-auto flex items-center gap-2">
+            <button
+              type="button"
+              className="inline-flex items-center rounded-md border border-border bg-background px-3 py-1 text-xs font-medium text-foreground shadow-sm hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
               onClick={() => {
                 try { sessionStorage.removeItem(TOUR_SEEN_KEY); } catch {}
                 setTourStepId(getFirstTutorialStepId());
               }}
-              title="Start tour"
             >
-              <HelpCircle className="w-5 h-5" />
-            </Button>
+              Guided tour
+            </button>
           </div>
+        </div>
+      </header>
+      <div className="flex-1 p-6">
+      <div className="max-w-7xl mx-auto space-y-6">
+        <header className="text-center space-y-2">
+          <h1 className="text-4xl font-bold text-foreground">ImageLab</h1>
           <p className="text-muted-foreground">
             Apply image transformations and see the math behind each operation in real time.
           </p>
@@ -182,18 +208,26 @@ export default function Index(_props: IndexProps) {
                     </Button>
                     <input ref={fileInputRef} type="file" accept="image/*" onChange={handleImageUpload} className="hidden" />
                   </div>
-                </div> : <div className="aspect-video w-full overflow-hidden"><CanvasAny key={dechanneled ? 'dechanneled' : 'normal'} image={image} pipeline={_props.pipeline} onSelectInstance={_props.setSelectedInstanceId} selectedInstanceId={_props.selectedInstanceId ?? null} brightness={brightness} contrast={contrast} saturation={saturation} hue={hue} whites={whites} blacks={blacks} linearSaturation={linearSaturation} vibrance={vibrance} transformOrder={transformOrder} onPixelSelect={setSelectedRGB} onSelectConvAnalysis={setConvAnalysis} previewOriginal={previewOriginal} dechanneled={dechanneled} /></div>}
+                </div> : <div className="aspect-video w-full overflow-hidden"><CanvasAny key={dechanneled ? 'dechanneled' : 'normal'} image={image} pipeline={_props.pipeline} onSelectInstance={_props.setSelectedInstanceId} selectedInstanceId={_props.selectedInstanceId ?? null} brightness={brightness} contrast={contrast} saturation={saturation} hue={hue} whites={whites} blacks={blacks} linearSaturation={linearSaturation} vibrance={vibrance} transformOrder={transformOrder} onPixelSelect={(rgb: RGB) => { setSelectedRGB(rgb); advanceTourOn("pixel-selected"); }} onSelectConvAnalysis={setConvAnalysis} previewOriginal={previewOriginal} dechanneled={dechanneled} /></div>}
             </Card>
 
             <Card className="p-6 border-border bg-card" data-tour-id="transform-controls">
               <h2 className="text-xl font-semibold text-primary mb-6">Transformation Controls</h2>
               
               <AdjustmentLayer
+                highlightConvolutionOptions={tourStepId === "add-conv-layer"}
                 transformOrder={transformOrder}
                 onOrderChange={setTransformOrder}
                 pipeline={_props.pipeline}
-                onReorderInstances={_props.pipelineApi?.reorderInstances}
-                onAddInstance={_props.pipelineApi?.addInstance}
+                onReorderInstances={_props.pipelineApi?.reorderInstances ? (a: string, o: string) => { _props.pipelineApi!.reorderInstances(a, o); advanceTourOn("layer-reordered"); } : undefined}
+                onAddInstance={_props.pipelineApi?.addInstance ? (k: any) => {
+                  _props.pipelineApi!.addInstance(k);
+                  const convKinds = new Set(['blur', 'sharpen', 'edge', 'denoise', 'customConv']);
+                  if (convKinds.has(k)) {
+                    advanceTourOn("conv-layer-added");
+                  }
+                  advanceTourOn("layer-added");
+                } : undefined}
                 onDuplicateInstance={_props.pipelineApi?.duplicateInstance}
                 onDeleteInstance={_props.pipelineApi?.deleteInstance}
                 onToggleInstance={_props.pipelineApi?.toggleInstance}
@@ -262,6 +296,7 @@ export default function Index(_props: IndexProps) {
                     }
                     return { ...prev, params: { value: nextValue } };
                   });
+                  advanceTourOn("slider-changed");
                   return;
                 }}
                 brightness={brightness}
@@ -302,10 +337,13 @@ export default function Index(_props: IndexProps) {
                 onCardClick={(transformType) => setActiveTab(transformType as string)}
                 onInstanceSelect={(instanceId) => {
                   _props.setSelectedInstanceId?.(instanceId);
-                  // Also set activeTab based on the instance kind
                   const instance = _props.pipeline?.find(p => p.id === instanceId);
                   if (instance) {
                     setActiveTab(instance.kind);
+                    const convKinds = new Set(['blur', 'sharpen', 'edge', 'denoise', 'customConv']);
+                    if (convKinds.has(instance.kind)) {
+                      advanceTourOn("conv-layer-selected");
+                    }
                   }
                 }}
                 activeTab={activeTab}
@@ -338,6 +376,7 @@ export default function Index(_props: IndexProps) {
             />
           </div>
         </div>
+      </div>
       </div>
     </div>;
 }

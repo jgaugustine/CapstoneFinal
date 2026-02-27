@@ -75,6 +75,7 @@ export const TutorialTour = ({
   const index = steps.findIndex((s) => s.id === step.id);
   const isFirst = index <= 0;
   const isLast = index === totalSteps - 1;
+  const hasAdvanceOn = !!step.advanceOn;
 
   const viewportWidth = window.innerWidth;
   const viewportHeight = window.innerHeight;
@@ -153,6 +154,11 @@ export const TutorialTour = ({
         </div>
         <h2 className="mb-2 text-base font-semibold text-foreground">{step.title}</h2>
         <div className="mb-4 text-sm text-muted-foreground">{body}</div>
+        {hasAdvanceOn && (
+          <div className="mb-3 text-xs font-medium text-primary animate-pulse">
+            Complete the action above to advance, or press Next.
+          </div>
+        )}
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-2">
             <Button

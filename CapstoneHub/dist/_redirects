@@ -1,0 +1,5 @@
+# Serve lab apps as static files (each has its own index.html)
+/labs/*  /labs/:splat  200
+
+# SPA fallback for the hub's own routes
+/*       /index.html   200

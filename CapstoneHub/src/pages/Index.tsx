@@ -102,13 +102,13 @@ export default function Index() {
                   {stage.labs.length > 0 && (
                     <div className="flex flex-col gap-2 w-full max-w-[200px]">
                       {stage.labs.map((lab) => (
-                        <a
+                        <Link
                           key={lab.path}
-                          href={lab.path.endsWith("/") ? lab.path : lab.path + "/"}
+                          to={lab.path}
                           className={cn(buttonVariants({ variant: "outline", size: "sm" }), "w-full justify-center")}
                         >
                           {lab.label}
-                        </a>
+                        </Link>
                       ))}
                     </div>
                   )}

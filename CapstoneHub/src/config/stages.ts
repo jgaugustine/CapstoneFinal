@@ -41,14 +41,16 @@ export const STAGES: StageConfig[] = [
       "Exposure triangle: shutter, aperture, and ISO jointly control light and noise.",
     ],
     takeaways: [
-      "Brighter scenes → more photons per pixel and better signal-to-noise ratio.",
-      "Expose to the right (ETTR) when you can, without clipping important highlights.",
+      "Shutter: prefer longer for low noise when the subject is still; shorter to freeze motion.",
+      "Aperture: prefer wider (lower f-number) for low light and shallow DOF; narrower for sharpness and deeper focus.",
+      "ISO: raise it only after shutter and aperture are at their limits; expect more noise in shadows.",
+      "ETTR: expose as bright as you can without clipping important highlights; recover in raw if needed.",
     ],
     articles: [
       { slug: "light-to-image", title: "Light → Image: Cameras as Photon Counters", summary: "How cameras count photons and why more light means less noise." },
     ],
     labs: [
-      { label: "Photon Simulation", path: "/labs/photon-sim" },
+      // { label: "Photon Simulation", path: "/labs/photon-sim" },  // temporarily removed
       { label: "ExposureLAB", path: "/labs/exposure" },
     ],
   },
@@ -69,8 +71,10 @@ export const STAGES: StageConfig[] = [
       "CFA design (Bayer, X-Trans, Foveon) determines how the sensor samples color before demosaicing.",
     ],
     takeaways: [
-      "Metering mode and subject placement strongly influence exposure on auto/AE modes.",
-      "Different CFA designs trade sharpness, moiré resistance, and processing complexity.",
+      "Metering: matrix for general scenes; center-weighted when the subject is centered; spot when you want to meter a specific area.",
+      "Program mode: Av when DOF matters; Tv when shutter speed matters; Manual when you want full control.",
+      "Exposure compensation: use +EV when the scene is darker than mid-gray; −EV when it is brighter.",
+      "Subject placement: where you point spot or center-weighted metering changes the exposure the camera suggests.",
     ],
     articles: [
       {
@@ -113,8 +117,10 @@ export const STAGES: StageConfig[] = [
       "Different demosaicing strategies trade speed, detail retention, and artifact suppression.",
     ],
     takeaways: [
-      "Prefer gaining exposure with shutter and aperture before relying on high ISO.",
-      "Bit depth and readout electronics determine how many subtle tonal steps the camera can represent.",
+      "Shutter & aperture first: use longer shutter and/or wider aperture before raising ISO to limit noise.",
+      "ISO ceiling: know your camera’s usable ISO range; accept grain above that before underexposing.",
+      "Raw vs JPEG: shoot raw when you may need to recover highlights or shadows; JPEG locks in fewer options.",
+      "Bit depth: higher-bit raw files (14-bit vs 12-bit) preserve more tonal steps for heavy editing.",
     ],
     articles: [
       {
@@ -153,7 +159,10 @@ export const STAGES: StageConfig[] = [
       "Non-destructive editing lets you revisit the original capture decisions.",
     ],
     takeaways: [
-      "Most of the \"look\" of a photo is decided in post more than at capture.",
+      "Tone curve: lift shadows or pull highlights to shape contrast and mood.",
+      "Color grading: adjust white balance, HSL, and color curves to define the look.",
+      "Local adjustments: use masks or gradients to edit specific areas without affecting the whole image.",
+      "Non-destructive workflow: keep layers and edits reversible so you can revisit earlier decisions.",
     ],
     articles: [
       { slug: "post-processing", title: "Post-processing", summary: "Tone mapping, color correction, and editing after capture." },

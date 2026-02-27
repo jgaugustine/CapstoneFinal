@@ -4,6 +4,8 @@ export type TutorialTarget =
   | "center-overlay"
   | "image-preview"
   | "transform-controls"
+  | "add-adjustment-btn"
+  | "layer-list"
   | "math-panel"
   | "pixel-inspector"
   | "dechannel-btn";
@@ -11,17 +13,25 @@ export type TutorialTarget =
 export type TutorialEvent =
   | "image-loaded"
   | "slider-changed"
-  | "pixel-selected";
+  | "pixel-selected"
+  | "layer-added"
+  | "layer-reordered"
+  | "conv-layer-added"
+  | "conv-layer-selected";
 
 export interface TutorialStep {
   id:
     | "welcome"
     | "upload"
     | "canvas"
-    | "layers"
+    | "rgb-cube"
+    | "add-layer"
+    | "reorder"
     | "adjust"
+    | "add-conv-layer"
+    | "click-conv-layer"
+    | "inspect-conv-math"
     | "math"
-    | "pixel"
     | "dechannel"
     | "finish";
   title: string;
@@ -48,20 +58,56 @@ export const tutorialSteps: TutorialStep[] = [
     id: "canvas",
     title: "Interactive canvas",
     target: "image-preview",
-    body: "Once loaded, click any pixel on the canvas to inspect its RGB values. The pixel inspector shows the original and transformed color, and the math panel updates to show how each transformation affects that specific pixel.",
+    body: "Click any pixel on the canvas to inspect its RGB values. The pixel inspector shows the original and transformed color, and the math panel updates to show how each transformation affects that specific pixel.",
+    advanceOn: "pixel-selected",
   },
   {
-    id: "layers",
-    title: "Transformation pipeline",
-    target: "transform-controls",
-    body: "Each transformation is an adjustment layer in a pipeline. Drag to reorder, toggle layers on/off, duplicate, or delete them. The order matters — transformations are applied top to bottom, just like a real image editor.",
+    id: "rgb-cube",
+    title: "3D RGB cube & math",
+    target: "math-panel",
+    body: "Look at the right panel. The 3D RGB cube visualizes your selected pixel in color space — drag to rotate the view and see how the point moves. The pixel you clicked populates both the cube and the math formulas below, so you can trace each transformation step by step.",
+  },
+  {
+    id: "add-layer",
+    title: "Add an adjustment layer",
+    target: "add-adjustment-btn",
+    body: "Click \"New Adjustment\" to add a transformation layer. Choose from color adjustments (brightness, contrast, saturation, hue) or convolution filters (blur, sharpen, edge detection, custom kernels). Try adding one now!",
+    advanceOn: "layer-added",
+  },
+  {
+    id: "reorder",
+    title: "Drag to reorder layers",
+    target: "layer-list",
+    body: "The order matters — transformations are applied top to bottom, just like a real image editor. Drag any layer card up or down to reorder. The result changes in real time as you rearrange the pipeline. Try dragging a layer now!",
+    advanceOn: "layer-reordered",
   },
   {
     id: "adjust",
     title: "Adjust parameters",
     target: "transform-controls",
-    body: "Click any layer to select it and adjust its parameters with the slider. You can also add convolution filters like blur, sharpen, edge detection, and custom kernels. Double-click a slider to reset it.",
+    body: "Click any layer to select it, then use the slider to adjust its value. You can toggle layers on/off with the eye icon, duplicate, or delete them. Double-click a slider to reset it to the default.",
     advanceOn: "slider-changed",
+  },
+  {
+    id: "add-conv-layer",
+    title: "Add a convolution layer",
+    target: "add-adjustment-btn",
+    body: "Now try adding a convolution filter. Click \"New Adjustment\" and pick one from the second group — Blur, Sharpen, Denoise, Edge Detect, or Custom Convolution.",
+    advanceOn: "conv-layer-added",
+  },
+  {
+    id: "click-conv-layer",
+    title: "Click the layer to inspect the math",
+    target: "layer-list",
+    body: "Click on your convolution layer in the list to select it. The math panel on the right updates to show that layer's formula and kernel.",
+    advanceOn: "conv-layer-selected",
+  },
+  {
+    id: "inspect-conv-math",
+    title: "Inspect the convolution math",
+    target: "math-panel",
+    body: "Look at the bottom right — the math panel shows the convolution formula and the 3D product cubes. Drag the 32×32 box to select a region, then click \"Use This Region\" to populate the dot-product breakdown for each color channel, with the neighborhood values multiplied by the kernel weights.",
+    advanceOn: "pixel-selected",
   },
   {
     id: "math",
