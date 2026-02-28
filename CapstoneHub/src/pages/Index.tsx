@@ -17,6 +17,9 @@ const SECTION_BG: Record<StageId, string> = {
   post: "bg-section-post",
 };
 
+const STAGE_GRID_CLASS =
+  "w-full max-w-[1200px] mx-auto grid grid-cols-1 lg:grid-cols-[1fr_minmax(0,68ch)_minmax(260px,300px)] gap-x-0 lg:items-stretch";
+
 // Persist across navigations within the same tab
 let savedScrollY = 0;
 let savedScrollRatio = 0; // scrollTop / maxScroll, survives layout shifts (e.g. hero image loading)
@@ -109,12 +112,13 @@ export default function Index() {
           ref={scrollContainerRef}
           className="flex-1 min-w-0 overflow-y-auto overflow-x-hidden scroll-smooth snap-y snap-proximity bg-background"
         >
+          <div className="flex min-h-full flex-col min-w-0">
           {/* Hero: pipeline diagram image */}
           <section className="snap-start min-h-[60vh] w-full relative overflow-hidden flex items-center justify-center">
             <img
               src="/hero-pipeline.png"
               alt=""
-              className="absolute inset-0 w-full h-full object-cover object-center blur-[2px]"
+              className="absolute inset-0 w-full h-full object-cover object-center"
               aria-hidden
             />
             <div className="absolute inset-0 bg-black/50" aria-hidden />
@@ -131,8 +135,8 @@ export default function Index() {
               data-stage={stage.id}
               className={cn(SECTION_BG[stage.id], "snap-start min-h-[80vh] py-12 scroll-mt-24")}
             >
-              <div className="w-full max-w-[1200px] mx-auto grid grid-cols-1 lg:grid-cols-[1fr_minmax(0,68ch)_minmax(260px,300px)] gap-x-0 lg:items-start">
-                {/* Left: stage icon + name + lab buttons */}
+              <div className={STAGE_GRID_CLASS}>
+                {/* Stage icon + name + lab buttons */}
                 <AnimatedSection delayMs={0} className="hidden lg:flex flex-col pt-6 pr-6 self-start sticky top-6 items-end gap-4">
                   <div
                     className={cn(
@@ -179,6 +183,7 @@ export default function Index() {
               </div>
             </section>
           ))}
+          </div>
         </div>
       </div>
     </div>

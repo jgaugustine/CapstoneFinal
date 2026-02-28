@@ -23,9 +23,6 @@ export function ForPhotographers({ stage, className }: ForPhotographersProps) {
           For Photographers
         </h3>
       </div>
-      <p className="text-sm font-medium text-foreground mb-3">
-        {stage.guidingQuestion}
-      </p>
       <ul className="space-y-1.5 text-sm text-muted-foreground">
         {stage.takeaways.map((item, i) => (
           <li key={i} className="flex gap-2">

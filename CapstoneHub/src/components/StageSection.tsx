@@ -12,7 +12,7 @@ interface StageSectionProps {
 
 export function StageSection({ stage, onBeforeNavigate }: StageSectionProps) {
   return (
-    <div className="scroll-mt-24 py-16 md:py-20">
+    <div className="scroll-mt-24 pt-6 pb-16 md:pt-8 md:pb-20">
       <h2 className="font-mono text-2xl font-bold text-foreground mb-8 lg:hidden flex items-center gap-3">
         <span
           className={cn(
