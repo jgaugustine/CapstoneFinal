@@ -1,5 +1,5 @@
 import type { LucideIcon } from "lucide-react";
-import { Sun, Cpu, Gauge, Grid3X3, Palette } from "lucide-react";
+import { Sun, Cpu, Binary, Palette } from "lucide-react";
 
 export type StageId = "light" | "sensor" | "readout-demosaic" | "post";
 
@@ -29,7 +29,7 @@ export const STAGES: StageConfig[] = [
     label: "Light & Exposure",
     path: "/light",
     icon: Sun,
-    guidingQuestion: 'Why does "more light = less noise"?',
+    guidingQuestion: "Why does more light > less noise?",
     whatHappens: [
       "Scene radiance, exposure time, and aperture together determine how many photons each photosite receives.",
       "Each photosite converts a fraction of those photons into electrons based on the sensor's quantum efficiency.",
@@ -104,7 +104,7 @@ export const STAGES: StageConfig[] = [
     id: "readout-demosaic",
     label: "Digitization & Demosaicing",
     path: "/readout-demosaic",
-    icon: Gauge,
+    icon: Binary,
     guidingQuestion: "From raw sensor data to full-color image?",
     whatHappens: [
       "Analog charge in each photosite is amplified and converted to a digital number (bit depth).",
@@ -174,3 +174,27 @@ export const STAGES: StageConfig[] = [
 export function getStageById(id: StageId): StageConfig | undefined {
   return STAGES.find((s) => s.id === id);
 }
+
+/** Tailwind classes for stage accent colors (text, border, etc.) */
+export const STAGE_ACCENT_CLASSES: Record<StageId, string> = {
+  light: "text-[hsl(var(--stage-light))]",
+  sensor: "text-[hsl(var(--stage-sensor))]",
+  "readout-demosaic": "text-[hsl(var(--stage-readout-demosaic))]",
+  post: "text-[hsl(var(--stage-post))]",
+};
+
+/** Tailwind classes for stage accent border colors */
+export const STAGE_BORDER_CLASSES: Record<StageId, string> = {
+  light: "border-[hsl(var(--stage-light))]",
+  sensor: "border-[hsl(var(--stage-sensor))]",
+  "readout-demosaic": "border-[hsl(var(--stage-readout-demosaic))]",
+  post: "border-[hsl(var(--stage-post))]",
+};
+
+/** Tailwind classes for left-border accent only (e.g. article cards) */
+export const STAGE_BORDER_L_CLASSES: Record<StageId, string> = {
+  light: "border-l-4 border-l-[hsl(var(--stage-light))]",
+  sensor: "border-l-4 border-l-[hsl(var(--stage-sensor))]",
+  "readout-demosaic": "border-l-4 border-l-[hsl(var(--stage-readout-demosaic))]",
+  post: "border-l-4 border-l-[hsl(var(--stage-post))]",
+};

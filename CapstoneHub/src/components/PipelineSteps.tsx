@@ -1,5 +1,5 @@
 import { cn } from "@/lib/utils";
-import { STAGES } from "@/config/stages";
+import { STAGES, STAGE_ACCENT_CLASSES, STAGE_BORDER_CLASSES } from "@/config/stages";
 import type { StageId } from "@/config/stages";
 import type { MouseEvent } from "react";
 
@@ -38,14 +38,15 @@ export function PipelineSteps({ activeStage, orientation = "vertical", className
             className={cn(
               "flex items-center gap-3 rounded-md px-2 py-2 text-sm font-medium transition-colors",
               isActive
-                ? "text-foreground"
-                : "text-muted-foreground hover:text-foreground"
+                ? "text-foreground border-l-2 pl-2"
+                : "text-muted-foreground hover:text-foreground border-l-2 border-transparent pl-2",
+              isActive && STAGE_BORDER_CLASSES[stage.id]
             )}
           >
             <span
               className={cn(
                 "flex h-7 w-7 shrink-0 items-center justify-center rounded-md",
-                isActive ? "text-primary" : "text-muted-foreground"
+                isActive ? STAGE_ACCENT_CLASSES[stage.id] : "text-muted-foreground"
               )}
             >
               <Icon className="h-4 w-4" />

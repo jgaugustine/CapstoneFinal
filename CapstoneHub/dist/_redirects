@@ -1,5 +1,6 @@
-# Serve lab apps as static files (each has its own index.html)
-/labs/*  /labs/:splat  200
+# Lab apps are static files with their own index.html — serve as-is (force
+# ensures this takes priority over the SPA catch-all below).
+/labs/*  /labs/:splat  200!
 
-# SPA fallback for the hub's own routes
+# SPA fallback for the hub's own React Router routes
 /*       /index.html   200

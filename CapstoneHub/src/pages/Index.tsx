@@ -1,15 +1,13 @@
-import { useEffect, useRef } from "react";
+import { useLayoutEffect, useRef } from "react";
 import { Link } from "react-router-dom";
-import { STAGES } from "@/config/stages";
+import { STAGES, STAGE_ACCENT_CLASSES, STAGE_BORDER_CLASSES } from "@/config/stages";
 import type { StageId } from "@/config/stages";
 import { Header } from "@/components/Header";
-import { HeroPipelineDiagram } from "@/components/HeroPipelineDiagram";
 import { StageSection } from "@/components/StageSection";
 import { PipelineSteps } from "@/components/PipelineSteps";
 import { ForPhotographers } from "@/components/ForPhotographers";
 import { AnimatedSection } from "@/components/AnimatedSection";
 import { useScrollSpy } from "@/hooks/useScrollSpy";
-import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 const SECTION_BG: Record<StageId, string> = {
@@ -19,36 +17,81 @@ const SECTION_BG: Record<StageId, string> = {
   post: "bg-section-post",
 };
 
+// Persist across navigations within the same tab
+let savedScrollY = 0;
+let savedScrollRatio = 0; // scrollTop / maxScroll, survives layout shifts (e.g. hero image loading)
+let savedSectionId: StageId | null = null;
+
 export default function Index() {
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
   const activeStage = useScrollSpy();
 
-  useEffect(() => {
-    const key = "capstonehub:index-scroll";
+  const saveScroll = () => {
+    const el = scrollContainerRef.current;
+    if (!el) return;
+    const maxScroll = el.scrollHeight - el.clientHeight;
+    savedScrollY = el.scrollTop;
+    savedScrollRatio = maxScroll > 0 ? el.scrollTop / maxScroll : 0;
+    const sectionIds: StageId[] = ["light", "sensor", "readout-demosaic", "post"];
+    const mid = el.scrollTop + el.clientHeight / 2;
+    for (const id of sectionIds) {
+      const section = document.getElementById(id);
+      if (section) {
+        const top = section.offsetTop;
+        const bottom = top + section.offsetHeight;
+        if (mid >= top && mid <= bottom) {
+          savedSectionId = id;
+          return;
+        }
+        if (top <= mid) savedSectionId = id;
+      }
+    }
+  };
+
+  useLayoutEffect(() => {
     const container = scrollContainerRef.current;
     if (!container) return;
 
-    const saved = sessionStorage.getItem(key);
-    if (saved !== null) {
-      const y = Number(saved);
-      if (!Number.isNaN(y)) {
-        container.scrollTo({ top: y, behavior: "auto" });
-      }
-    }
+    const sectionId = savedSectionId;
 
-    const handleScroll = () => {
-      const el = scrollContainerRef.current;
-      if (!el) return;
-      sessionStorage.setItem(key, String(el.scrollTop));
+    const restore = () => {
+      const maxScroll = container.scrollHeight - container.clientHeight;
+      if (maxScroll <= 0) return;
+      // Use ratio when content may have shifted (e.g. hero image loaded); fallback to pixel
+      const targetY =
+        savedScrollRatio > 0
+          ? Math.round(savedScrollRatio * maxScroll)
+          : savedScrollY;
+      if (targetY > 0 && Math.abs(container.scrollTop - targetY) > 20) {
+        container.style.scrollSnapType = "none";
+        container.scrollTo({ top: targetY, behavior: "auto" });
+        requestAnimationFrame(() => {
+          container.style.scrollSnapType = "";
+        });
+        return;
+      }
+      // Fallback: scroll to saved section (use center to avoid "too high")
+      if (sectionId && container.scrollTop < 100) {
+        const el = document.getElementById(sectionId);
+        if (el) {
+          el.scrollIntoView({ behavior: "auto", block: "center" });
+        }
+      }
     };
 
+    restore();
+    // Retry after content loads (images, etc.) - ratio helps when layout changes
+    const t1 = setTimeout(restore, 100);
+    const t2 = setTimeout(restore, 400);
+
+    const handleScroll = () => saveScroll();
     container.addEventListener("scroll", handleScroll);
 
     return () => {
+      clearTimeout(t1);
+      clearTimeout(t2);
       container.removeEventListener("scroll", handleScroll);
-      const el = scrollContainerRef.current;
-      if (!el) return;
-      sessionStorage.setItem(key, String(el.scrollTop));
+      saveScroll();
     };
   }, []);
 
@@ -66,24 +109,19 @@ export default function Index() {
           ref={scrollContainerRef}
           className="flex-1 min-w-0 overflow-y-auto overflow-x-hidden scroll-smooth snap-y snap-proximity bg-background"
         >
-          {/* Hero: full-width section */}
-          <section className="snap-start min-h-[60vh] flex flex-col justify-center lg:flex-row lg:gap-10">
-          <div className="w-full max-w-[1200px] mx-auto flex flex-col lg:flex-row">
-            <div className="flex-1 min-w-0 max-w-[68ch] mx-auto px-6 md:px-12 py-12 md:py-16 lg:pl-12 lg:pr-0">
-              <header className="mb-8 md:mb-12">
-                <h1 className="font-mono text-3xl md:text-4xl font-bold text-foreground tracking-tight mb-4">
-                  Capstone
-                </h1>
-                <p className="text-lg text-muted-foreground leading-relaxed">
-                  Explore the camera signal chain: light, sensor, digitization & demosaicing, and post-processing.
-                  Scroll for what happens at each stage, key concepts, and in-depth articles; try the labs in each section.
-                </p>
-              </header>
-              <HeroPipelineDiagram />
-            </div>
-            <aside className="hidden lg:block w-[260px] xl:w-[300px] shrink-0" aria-hidden />
-          </div>
-        </section>
+          {/* Hero: pipeline diagram image */}
+          <section className="snap-start min-h-[60vh] w-full relative overflow-hidden flex items-center justify-center">
+            <img
+              src="/hero-pipeline.png"
+              alt=""
+              className="absolute inset-0 w-full h-full object-cover object-center blur-[2px]"
+              aria-hidden
+            />
+            <div className="absolute inset-0 bg-black/50" aria-hidden />
+            <h1 className="relative z-10 font-mono text-4xl md:text-6xl font-bold text-white tracking-tight text-center drop-shadow-lg px-4">
+              Math & Photography
+            </h1>
+          </section>
 
           {/* Each stage: full-width section with distinct background color */}
           {STAGES.map((stage) => (
@@ -94,8 +132,19 @@ export default function Index() {
               className={cn(SECTION_BG[stage.id], "snap-start min-h-[80vh] py-12 scroll-mt-24")}
             >
               <div className="w-full max-w-[1200px] mx-auto grid grid-cols-1 lg:grid-cols-[1fr_minmax(0,68ch)_minmax(260px,300px)] gap-x-0 lg:items-start">
-                {/* Left: stage name + lab buttons */}
+                {/* Left: stage icon + name + lab buttons */}
                 <AnimatedSection delayMs={0} className="hidden lg:flex flex-col pt-6 pr-6 self-start sticky top-6 items-end gap-4">
+                  <div
+                    className={cn(
+                      "flex h-12 w-12 shrink-0 items-center justify-center rounded-lg border mb-1",
+                      STAGE_BORDER_CLASSES[stage.id]
+                    )}
+                  >
+                    <stage.icon
+                      className={cn("h-6 w-6", STAGE_ACCENT_CLASSES[stage.id])}
+                      aria-hidden
+                    />
+                  </div>
                   <h2 className="font-mono text-2xl xl:text-3xl font-bold text-foreground text-right">
                     {stage.label}
                   </h2>
@@ -105,7 +154,13 @@ export default function Index() {
                         <Link
                           key={lab.path}
                           to={lab.path}
-                          className={cn(buttonVariants({ variant: "outline", size: "sm" }), "w-full justify-center")}
+                          onClick={saveScroll}
+                          className={cn(
+                            "inline-flex items-center justify-center rounded-md text-sm font-medium h-9 px-3 border w-full transition-colors hover:opacity-90",
+                            STAGE_BORDER_CLASSES[stage.id],
+                            STAGE_ACCENT_CLASSES[stage.id],
+                            "hover:bg-white/5"
+                          )}
                         >
                           {lab.label}
                         </Link>
@@ -115,7 +170,7 @@ export default function Index() {
                 </AnimatedSection>
                 {/* Middle: content */}
                 <AnimatedSection delayMs={150} className="px-6 md:px-12 lg:px-8">
-                  <StageSection stage={stage} />
+                  <StageSection stage={stage} onBeforeNavigate={saveScroll} />
                 </AnimatedSection>
                 {/* Right: For Photographers, staggered reveal */}
                 <AnimatedSection delayMs={300} className="hidden lg:block pt-6 pl-6 pr-8 self-start sticky top-6">

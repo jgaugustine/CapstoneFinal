@@ -46,6 +46,12 @@ export default {
           "readout-demosaic": "hsl(var(--section-readout-demosaic))",
           post: "hsl(var(--section-post))",
         },
+        stage: {
+          light: "hsl(var(--stage-light))",
+          sensor: "hsl(var(--stage-sensor))",
+          "readout-demosaic": "hsl(var(--stage-readout-demosaic))",
+          post: "hsl(var(--stage-post))",
+        },
       },
       borderRadius: {
         lg: "var(--radius)",

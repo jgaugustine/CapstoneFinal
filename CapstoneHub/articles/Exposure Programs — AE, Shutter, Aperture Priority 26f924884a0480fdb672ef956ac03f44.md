@@ -137,12 +137,12 @@ flowchart TD
   J --> K["Final exposure settings"]
 
   %% Node classes
-  classDef input fill:#E3F2FD,stroke:#1E88E5,stroke-width:2px,color:#0D47A1;
-  classDef preprocess fill:#E8F5E9,stroke:#43A047,stroke-width:2px,color:#1B5E20;
-  classDef simulate fill:#FFF3E0,stroke:#FB8C00,stroke-width:2px,color:#E65100;
-  classDef decision fill:#FCE4EC,stroke:#D81B60,stroke-width:2px,color:#880E4F;
-  classDef optimize fill:#F3E5F5,stroke:#8E24AA,stroke-width:2px,color:#4A148C;
-  classDef output fill:#ECEFF1,stroke:#546E7A,stroke-width:2px,color:#263238;
+  classDef input fill:#E3F2FD,stroke:#1E88E5,stroke-width:2px,color:#000000;
+  classDef preprocess fill:#E8F5E9,stroke:#43A047,stroke-width:2px,color:#000000;
+  classDef simulate fill:#FFF3E0,stroke:#FB8C00,stroke-width:2px,color:#000000;
+  classDef decision fill:#FCE4EC,stroke:#D81B60,stroke-width:2px,color:#000000;
+  classDef optimize fill:#F3E5F5,stroke:#8E24AA,stroke-width:2px,color:#000000;
+  classDef output fill:#ECEFF1,stroke:#546E7A,stroke-width:2px,color:#000000;
 
   %% Assign classes
   class A input;

@@ -23,11 +23,16 @@
     --input: 224 24% 16%;
     --ring: 172 76% 48%;
     --radius: 0.5rem;
-    /* Section tints: cool, no brown tones */
-    --section-light: 205 32% 15%;
-    --section-sensor: 218 42% 14%;
-    --section-readout-demosaic: 258 38% 15%;
-    --section-post: 232 30% 15%;
+    /* Section tints: subtle accent toward each stage (orange, blue, purple, green) */
+    --section-light: 25 28% 14%;
+    --section-sensor: 217 35% 14%;
+    --section-readout-demosaic: 270 30% 14%;
+    --section-post: 142 25% 14%;
+    /* Stage accent colors (from reference design) */
+    --stage-light: 25 95% 53%;
+    --stage-sensor: 217 91% 60%;
+    --stage-readout-demosaic: 270 91% 65%;
+    --stage-post: 142 71% 45%;
   }
 }
 
