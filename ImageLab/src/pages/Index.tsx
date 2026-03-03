@@ -163,6 +163,8 @@ export default function Index(_props: IndexProps) {
       reader.readAsDataURL(file);
     }
   };
+  const isEmbedded = typeof window !== "undefined" && window.self !== window.top;
+
   return <div className="min-h-screen bg-background flex flex-col">
       <TutorialTour
         steps={tutorialSteps}
@@ -172,28 +174,30 @@ export default function Index(_props: IndexProps) {
         onSkip={closeTour}
         onComplete={closeTour}
       />
-      <header className="shrink-0 border-b bg-background px-4 py-2">
-        <div className="flex items-center gap-2">
-          <a
-            href="/"
-            className="text-sm text-muted-foreground hover:text-foreground"
-          >
-            ← Back to Capstone
-          </a>
-          <div className="ml-auto flex items-center gap-2">
-            <button
-              type="button"
-              className="inline-flex items-center rounded-md border border-border bg-background px-3 py-1 text-xs font-medium text-foreground shadow-sm hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-              onClick={() => {
-                try { sessionStorage.removeItem(TOUR_SEEN_KEY); } catch {}
-                setTourStepId(getFirstTutorialStepId());
-              }}
+      {!isEmbedded && (
+        <header className="shrink-0 border-b bg-background px-4 py-2">
+          <div className="flex items-center gap-2">
+            <a
+              href="/"
+              className="text-sm text-muted-foreground hover:text-foreground"
             >
-              Guided tour
-            </button>
+              ← Back to Capstone
+            </a>
+            <div className="ml-auto flex items-center gap-2">
+              <button
+                type="button"
+                className="inline-flex items-center rounded-md border border-border bg-background px-3 py-1 text-xs font-medium text-foreground shadow-sm hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                onClick={() => {
+                  try { sessionStorage.removeItem(TOUR_SEEN_KEY); } catch {}
+                  setTourStepId(getFirstTutorialStepId());
+                }}
+              >
+                Guided tour
+              </button>
+            </div>
           </div>
-        </div>
-      </header>
+        </header>
+      )}
       <div className="flex-1 p-6">
       <div className="max-w-7xl mx-auto space-y-6">
         <div className="grid lg:grid-cols-2 gap-6">
