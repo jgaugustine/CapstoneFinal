@@ -109,14 +109,9 @@ const App = () => {
             >
               ← Back to Capstone
             </a>
-            <div className="flex flex-col gap-0.5">
-              <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
-                Lab
-              </span>
-              <span className="text-sm font-semibold text-foreground">
-                ExposureLAB
-              </span>
-            </div>
+            <span className="text-sm font-semibold text-foreground">
+              ExposureLAB
+            </span>
             <div className="ml-auto flex items-center gap-2">
               <button
                 type="button"
