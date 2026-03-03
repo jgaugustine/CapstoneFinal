@@ -19,7 +19,13 @@ const App = () => {
 
   useEffect(() => {
     if (typeof window === "undefined") return;
-    const completed =
+    const params = new URLSearchParams(window.location.search);
+    const forceReset = params.get("resetTour") === "1";
+    if (forceReset) {
+      window.localStorage.removeItem("exposurelab_tutorial_completed");
+      window.history.replaceState({}, "", window.location.pathname);
+    }
+    const completed = !forceReset &&
       window.localStorage.getItem("exposurelab_tutorial_completed") === "1";
     setTutorialCompleted(completed);
     if (!completed) {
@@ -95,6 +101,8 @@ const App = () => {
           <div className="flex items-center gap-2">
             <a
               href="/"
+              target="_top"
+              rel="noopener noreferrer"
               className="text-sm text-muted-foreground hover:text-foreground"
             >
               ← Back to Capstone

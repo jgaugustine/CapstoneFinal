@@ -106,7 +106,13 @@ export default function Index() {
   // Tutorial tour state
   const TOUR_SEEN_KEY = "demosaiclab:tour-seen";
   const [tourStepId, setTourStepId] = useState<TutorialStep["id"] | null>(() => {
-    if (typeof sessionStorage !== "undefined" && sessionStorage.getItem(TOUR_SEEN_KEY)) return null;
+    if (typeof window === "undefined") return getFirstTutorialStepId();
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("resetTour") === "1") {
+      try { sessionStorage.removeItem(TOUR_SEEN_KEY); } catch {}
+      return getFirstTutorialStepId();
+    }
+    if (sessionStorage.getItem(TOUR_SEEN_KEY)) return null;
     return getFirstTutorialStepId();
   });
   const advanceTour = useCallback(() => {
@@ -1250,6 +1256,8 @@ export default function Index() {
         <div className="flex items-center gap-2">
           <a
             href="/"
+            target="_top"
+            rel="noopener noreferrer"
             className="text-sm text-muted-foreground hover:text-foreground"
           >
             ← Back to Capstone

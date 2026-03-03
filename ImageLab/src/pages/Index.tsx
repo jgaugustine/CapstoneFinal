@@ -56,7 +56,13 @@ export default function Index(_props: IndexProps) {
   // Tutorial tour state
   const TOUR_SEEN_KEY = "imagelab:tour-seen";
   const [tourStepId, setTourStepId] = useState<TutorialStep["id"] | null>(() => {
-    if (typeof sessionStorage !== "undefined" && sessionStorage.getItem(TOUR_SEEN_KEY)) return null;
+    if (typeof window === "undefined") return getFirstTutorialStepId();
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("resetTour") === "1") {
+      try { sessionStorage.removeItem(TOUR_SEEN_KEY); } catch {}
+      return getFirstTutorialStepId();
+    }
+    if (sessionStorage.getItem(TOUR_SEEN_KEY)) return null;
     return getFirstTutorialStepId();
   });
 
@@ -163,8 +169,6 @@ export default function Index(_props: IndexProps) {
       reader.readAsDataURL(file);
     }
   };
-  const isEmbedded = typeof window !== "undefined" && window.self !== window.top;
-
   return <div className="min-h-screen bg-background flex flex-col">
       <TutorialTour
         steps={tutorialSteps}
@@ -174,30 +178,30 @@ export default function Index(_props: IndexProps) {
         onSkip={closeTour}
         onComplete={closeTour}
       />
-      {!isEmbedded && (
-        <header className="shrink-0 border-b bg-background px-4 py-2">
-          <div className="flex items-center gap-2">
-            <a
-              href="/"
-              className="text-sm text-muted-foreground hover:text-foreground"
+      <header className="shrink-0 border-b bg-background px-4 py-2">
+        <div className="flex items-center gap-2">
+          <a
+            href="/"
+            target="_top"
+            rel="noopener noreferrer"
+            className="text-sm text-muted-foreground hover:text-foreground"
+          >
+            ← Back to Capstone
+          </a>
+          <div className="ml-auto flex items-center gap-2">
+            <button
+              type="button"
+              className="inline-flex items-center rounded-md border border-border bg-background px-3 py-1 text-xs font-medium text-foreground shadow-sm hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+              onClick={() => {
+                try { sessionStorage.removeItem(TOUR_SEEN_KEY); } catch {}
+                setTourStepId(getFirstTutorialStepId());
+              }}
             >
-              ← Back to Capstone
-            </a>
-            <div className="ml-auto flex items-center gap-2">
-              <button
-                type="button"
-                className="inline-flex items-center rounded-md border border-border bg-background px-3 py-1 text-xs font-medium text-foreground shadow-sm hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                onClick={() => {
-                  try { sessionStorage.removeItem(TOUR_SEEN_KEY); } catch {}
-                  setTourStepId(getFirstTutorialStepId());
-                }}
-              >
-                Guided tour
-              </button>
-            </div>
+              Guided tour
+            </button>
           </div>
-        </header>
-      )}
+        </div>
+      </header>
       <div className="flex-1 p-6">
       <div className="max-w-7xl mx-auto space-y-6">
         <div className="grid lg:grid-cols-2 gap-6">
