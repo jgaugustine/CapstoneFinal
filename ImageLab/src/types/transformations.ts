@@ -86,6 +86,13 @@ export interface FilterInstance {
   enabled: boolean;
 }
 
+export interface Checkpoint {
+  id: string;
+  name?: string;
+  pipeline: FilterInstance[];
+  createdAt: number;
+}
+
 // Helper: provide default params for each kind
 export function defaultParamsFor(kind: FilterKind): FilterParams {
   switch (kind) {

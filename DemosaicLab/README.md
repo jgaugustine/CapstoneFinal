@@ -6,7 +6,6 @@ DemosaicLab is an educational tool designed to help users understand how **demos
 
 ### 1. Input Modes
 *   **Lab / Synthetic Mode**: Upload any standard image (JPEG/PNG) or generate synthetic test patterns (Zone Plate, Checkerboard, etc.). The tool treats this image as **Ground Truth**, simulates a sensor CFA (Bayer or X-Trans), and then reconstructs it. This allows for precise error calculation (MSE, PSNR).
-*   **Real RAW Mode**: Upload raw **DNG** files directly. The tool extracts the raw CFA data and allows you to demosaic it. Since there is no ground truth, error metrics are disabled, but you can inspect the raw pixel values.
 
 ### 2. Algorithms (Implemented from Scratch)
 All demosaicing logic is implemented in pure TypeScript with no external image processing libraries, ensuring the code is transparent and educational.
@@ -34,10 +33,8 @@ npm run dev
 
 *   **CFA Simulation**: `src/lib/cfa.ts`
 *   **Demosaicers**: `src/lib/demosaic.ts` (contains all the pixel math)
-*   **DNG Decoding**: Uses `utif.js` to extract raw buffer data.
 
 ## Limitations
 
-*   **RAW Support**: Currently limited to uncompressed or standard DNG files. Proprietary RAW formats (CR2, NEF, RAF) must be converted to DNG first.
 *   **Performance**: Algorithms run in JavaScript on the main thread. Very large images (>20MP) are downscaled upon load to ensure the UI remains responsive.
 

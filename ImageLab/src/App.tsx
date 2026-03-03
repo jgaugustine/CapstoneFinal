@@ -6,7 +6,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { useCallback, useMemo, useState } from "react";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
-import { FilterInstance, FilterKind, defaultParamsFor } from "./types/transformations";
+import { FilterInstance, FilterKind, Checkpoint, defaultParamsFor } from "./types/transformations";
 
 const queryClient = new QueryClient();
 
@@ -29,6 +29,8 @@ const App = () => {
     }));
   });
   const [selectedInstanceId, setSelectedInstanceId] = useState<string | null>(null);
+  const [checkpoints, setCheckpoints] = useState<Checkpoint[]>([]);
+  const [compareCheckpointId, setCompareCheckpointId] = useState<string | null>(null);
 
   // Actions: add, duplicate, delete, toggle enable, reorder, and update params
   const addInstance = useCallback((kind: FilterKind) => {
@@ -105,12 +107,15 @@ const App = () => {
               path="/"
               element={
                 <Index
-                  // New pipeline props (not yet consumed by children until subsequent steps)
                   pipeline={pipeline}
                   setPipeline={setPipeline}
                   selectedInstanceId={selectedInstanceId}
                   setSelectedInstanceId={setSelectedInstanceId}
                   pipelineApi={pipelineApi}
+                  checkpoints={checkpoints}
+                  setCheckpoints={setCheckpoints}
+                  compareCheckpointId={compareCheckpointId}
+                  setCompareCheckpointId={setCompareCheckpointId}
                 />
               }
             />

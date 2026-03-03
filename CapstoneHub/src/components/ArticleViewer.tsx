@@ -1,3 +1,4 @@
+import { useEffect, useRef } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import rehypeKatex from "rehype-katex";
@@ -5,6 +6,7 @@ import remarkMath from "remark-math";
 import "katex/dist/katex.min.css";
 import { cn } from "@/lib/utils";
 import { MermaidDiagram } from "./MermaidDiagram";
+import { applyVocabLinks } from "@/lib/vocabDomLinks";
 
 interface ArticleViewerProps {
   content: string;
@@ -12,8 +14,18 @@ interface ArticleViewerProps {
 }
 
 export function ArticleViewer({ content, className }: ArticleViewerProps) {
+  const articleRef = useRef<HTMLElement>(null);
+
+  useEffect(() => {
+    const el = articleRef.current;
+    if (!el) return;
+    const timer = setTimeout(() => applyVocabLinks(el), 0);
+    return () => clearTimeout(timer);
+  }, [content]);
+
   return (
     <article
+      ref={articleRef}
       className={cn(
         "prose prose-invert max-w-none",
         "prose-headings:font-mono prose-headings:font-semibold",
@@ -21,6 +33,7 @@ export function ArticleViewer({ content, className }: ArticleViewerProps) {
         "prose-p:text-foreground prose-p:leading-relaxed",
         "prose-li:text-foreground",
         "prose-a:text-primary prose-a:no-underline hover:prose-a:underline",
+        "prose-a.vocab-link:font-medium",
         "prose-code:bg-muted prose-code:px-1 prose-code:py-0.5 prose-code:rounded prose-code:text-sm",
         "prose-pre:bg-muted prose-pre:border prose-pre:border-border",
         className

@@ -1,13 +1,14 @@
 import { useState, useRef, useCallback } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Upload, Layers } from "lucide-react";
-import { ImageCanvas } from "@/components/ImageCanvas";
+import { Upload, Layers, Download } from "lucide-react";
+import { ImageCanvas, type ImageCanvasRef } from "@/components/ImageCanvas";
 import { MathExplanation } from "@/components/MathExplanation";
 import { TransformationType, RGB, BlurParams, SharpenParams, EdgeParams, DenoiseParams, CustomConvParams, defaultParamsFor } from "@/types/transformations";
 import { AdjustmentLayer } from "@/components/AdjustmentLayer";
 import { downsizeImageToDataURL } from "@/lib/imageResize";
-import { FilterInstance } from "@/types/transformations";
+import { FilterInstance, Checkpoint } from "@/types/transformations";
+import { CheckpointPanel } from "@/components/CheckpointPanel";
 import { TutorialTour } from "@/components/TutorialTour";
 import { tutorialSteps, getFirstTutorialStepId } from "@/config/tutorialSteps";
 import type { TutorialStep } from "@/config/tutorialSteps";
@@ -26,6 +27,10 @@ interface IndexProps {
     reorderInstances: (activeId: string, overId: string) => void;
     updateInstanceParams: (id: string, updater: (prev: FilterInstance) => FilterInstance) => void;
   };
+  checkpoints?: Checkpoint[];
+  setCheckpoints?: (next: Checkpoint[] | ((prev: Checkpoint[]) => Checkpoint[])) => void;
+  compareCheckpointId?: string | null;
+  setCompareCheckpointId?: (id: string | null) => void;
 }
 
 export default function Index(_props: IndexProps) {
@@ -45,7 +50,7 @@ export default function Index(_props: IndexProps) {
   const [dechanneled, setDechanneled] = useState(false);
   const [convAnalysis, setConvAnalysis] = useState<any | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const CanvasAny = ImageCanvas as any;
+  const imageCanvasRef = useRef<ImageCanvasRef>(null);
   const MathAny = MathExplanation as any;
 
   // Tutorial tour state
@@ -88,6 +93,53 @@ export default function Index(_props: IndexProps) {
       return prev;
     });
   }, []);
+  const generateId = useCallback(() => {
+    if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+      return crypto.randomUUID();
+    }
+    return `${Math.random().toString(36).slice(2)}${Date.now().toString(36)}`;
+  }, []);
+
+  const saveCheckpoint = useCallback(() => {
+    if (!_props.pipeline || !_props.setCheckpoints) return;
+    const checkpoint: Checkpoint = {
+      id: generateId(),
+      pipeline: structuredClone(_props.pipeline),
+      createdAt: Date.now(),
+    };
+    _props.setCheckpoints((prev) => [checkpoint, ...prev]);
+  }, [_props.pipeline, _props.setCheckpoints, generateId]);
+
+  const revertCheckpoint = useCallback((id: string) => {
+    const cp = _props.checkpoints?.find((c) => c.id === id);
+    if (!cp || !_props.setPipeline || !_props.setCompareCheckpointId) return;
+    _props.setPipeline(cp.pipeline);
+    _props.setCompareCheckpointId(null);
+  }, [_props.checkpoints, _props.setPipeline, _props.setCompareCheckpointId]);
+
+  const compareCheckpoint = useCallback((id: string) => {
+    _props.setCompareCheckpointId?.((prev) => (prev === id ? null : id));
+  }, [_props.setCompareCheckpointId]);
+
+  const deleteCheckpoint = useCallback((id: string) => {
+    _props.setCheckpoints?.((prev) => prev.filter((c) => c.id !== id));
+    if (_props.compareCheckpointId === id) {
+      _props.setCompareCheckpointId?.(null);
+    }
+  }, [_props.setCheckpoints, _props.compareCheckpointId, _props.setCompareCheckpointId]);
+
+  const handleDownload = useCallback(async () => {
+    const blob = await imageCanvasRef.current?.exportToBlob("image/png");
+    if (!blob) return;
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `imagelab-export-${Date.now()}.png`;
+    a.click();
+    URL.revokeObjectURL(url);
+    advanceTourOn("image-downloaded");
+  }, [advanceTourOn]);
+
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -144,13 +196,6 @@ export default function Index(_props: IndexProps) {
       </header>
       <div className="flex-1 p-6">
       <div className="max-w-7xl mx-auto space-y-6">
-        <header className="text-center space-y-2">
-          <h1 className="text-4xl font-bold text-foreground">ImageLab</h1>
-          <p className="text-muted-foreground">
-            Apply image transformations and see the math behind each operation in real time.
-          </p>
-        </header>
-
         <div className="grid lg:grid-cols-2 gap-6">
           {/* Left Panel - Image & Controls */}
           <div className="space-y-6">
@@ -183,6 +228,17 @@ export default function Index(_props: IndexProps) {
                 >
                   Show Original
                 </Button>
+                <Button
+                  className="shrink-0"
+                  variant="outline"
+                  onClick={handleDownload}
+                  disabled={dechanneled}
+                  data-tour-id="download-btn"
+                  title={dechanneled ? "Switch to normal view to download" : "Download processed image (PNG)"}
+                >
+                  <Download className="w-4 h-4 mr-2" />
+                  Download
+                </Button>
                     <Button
                       className="shrink-0"
                       variant="outline"
@@ -208,7 +264,62 @@ export default function Index(_props: IndexProps) {
                     </Button>
                     <input ref={fileInputRef} type="file" accept="image/*" onChange={handleImageUpload} className="hidden" />
                   </div>
-                </div> : <div className="aspect-video w-full overflow-hidden"><CanvasAny key={dechanneled ? 'dechanneled' : 'normal'} image={image} pipeline={_props.pipeline} onSelectInstance={_props.setSelectedInstanceId} selectedInstanceId={_props.selectedInstanceId ?? null} brightness={brightness} contrast={contrast} saturation={saturation} hue={hue} whites={whites} blacks={blacks} linearSaturation={linearSaturation} vibrance={vibrance} transformOrder={transformOrder} onPixelSelect={(rgb: RGB) => { setSelectedRGB(rgb); advanceTourOn("pixel-selected"); }} onSelectConvAnalysis={setConvAnalysis} previewOriginal={previewOriginal} dechanneled={dechanneled} /></div>}
+                </div> : _props.compareCheckpointId && _props.checkpoints?.find((c) => c.id === _props.compareCheckpointId) ? (
+                <div className="aspect-video w-full overflow-hidden" data-tour-id="compare-view">
+                  <div className="grid grid-cols-2 gap-2 h-full">
+                    <div className="flex flex-col overflow-hidden rounded-lg border border-border">
+                      <div className="shrink-0 px-2 py-1 text-xs font-medium bg-muted text-muted-foreground">Checkpoint</div>
+                      <div className="flex-1 min-h-0">
+                        <ImageCanvas
+                          key="compare-checkpoint"
+                          image={image}
+                          pipeline={_props.checkpoints?.find((c) => c.id === _props.compareCheckpointId)?.pipeline}
+                          brightness={brightness}
+                          contrast={contrast}
+                          saturation={saturation}
+                          hue={hue}
+                          whites={whites}
+                          blacks={blacks}
+                          linearSaturation={linearSaturation}
+                          vibrance={vibrance}
+                          transformOrder={transformOrder}
+                          enableInspector={false}
+                          previewOriginal={false}
+                          dechanneled={false}
+                        />
+                      </div>
+                    </div>
+                    <div className="flex flex-col overflow-hidden rounded-lg border border-border">
+                      <div className="shrink-0 px-2 py-1 text-xs font-medium bg-muted text-muted-foreground">Current</div>
+                      <div className="flex-1 min-h-0">
+                        <ImageCanvas
+                          ref={imageCanvasRef}
+                          key="compare-current"
+                          image={image}
+                          pipeline={_props.pipeline}
+                          onSelectInstance={_props.setSelectedInstanceId}
+                          selectedInstanceId={_props.selectedInstanceId ?? null}
+                          brightness={brightness}
+                          contrast={contrast}
+                          saturation={saturation}
+                          hue={hue}
+                          whites={whites}
+                          blacks={blacks}
+                          linearSaturation={linearSaturation}
+                          vibrance={vibrance}
+                          transformOrder={transformOrder}
+                          onPixelSelect={(rgb: RGB) => { setSelectedRGB(rgb); advanceTourOn("pixel-selected"); }}
+                          onSelectConvAnalysis={setConvAnalysis}
+                          previewOriginal={previewOriginal}
+                          dechanneled={false}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="aspect-video w-full overflow-hidden"><ImageCanvas ref={imageCanvasRef} key={dechanneled ? 'dechanneled' : 'normal'} image={image} pipeline={_props.pipeline} onSelectInstance={_props.setSelectedInstanceId} selectedInstanceId={_props.selectedInstanceId ?? null} brightness={brightness} contrast={contrast} saturation={saturation} hue={hue} whites={whites} blacks={blacks} linearSaturation={linearSaturation} vibrance={vibrance} transformOrder={transformOrder} onPixelSelect={(rgb: RGB) => { setSelectedRGB(rgb); advanceTourOn("pixel-selected"); }} onSelectConvAnalysis={setConvAnalysis} previewOriginal={previewOriginal} dechanneled={dechanneled} /></div>
+              )}
             </Card>
 
             <Card className="p-6 border-border bg-card" data-tour-id="transform-controls">
@@ -351,8 +462,20 @@ export default function Index(_props: IndexProps) {
             </Card>
           </div>
 
-          {/* Right Panel - Mathematical Explanation */}
+          {/* Right Panel - Checkpoints & Mathematical Explanation */}
           <div className="space-y-6" data-tour-id="math-panel">
+            <Card className="p-6 border-border bg-card">
+              <CheckpointPanel
+                checkpoints={_props.checkpoints ?? []}
+                onSaveCheckpoint={saveCheckpoint}
+                onRevert={revertCheckpoint}
+                onCompare={compareCheckpoint}
+                onDelete={deleteCheckpoint}
+                compareCheckpointId={_props.compareCheckpointId ?? null}
+                hasImage={!!image}
+                onCheckpointSaved={() => advanceTourOn("checkpoint-saved")}
+              />
+            </Card>
             <MathAny
               brightness={brightness}
               contrast={contrast}

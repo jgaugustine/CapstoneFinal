@@ -29,7 +29,7 @@ export const STAGES: StageConfig[] = [
     label: "Light & Exposure",
     path: "/light",
     icon: Sun,
-    guidingQuestion: "Why does more light > less noise?",
+    guidingQuestion: "How do we model light?",
     whatHappens: [
       "Scene radiance, exposure time, and aperture together determine how many photons each photosite receives.",
       "Each photosite converts a fraction of those photons into electrons based on the sensor's quantum efficiency.",
@@ -59,7 +59,7 @@ export const STAGES: StageConfig[] = [
     label: "Sensor & Metering",
     path: "/sensor",
     icon: Cpu,
-    guidingQuestion: "How does my camera measure the scene?",
+    guidingQuestion: "How do we convert photons → electrons → signal? How do hardware constraints shape the output?",
     whatHappens: [
       "The metering system compresses the whole scene into a representative brightness value (EV).",
       "Weights from the chosen metering mode (matrix, center-weighted, spot, subject) decide which areas matter most.",
@@ -105,7 +105,7 @@ export const STAGES: StageConfig[] = [
     label: "Digitization & Demosaicing",
     path: "/readout-demosaic",
     icon: Binary,
-    guidingQuestion: "From raw sensor data to full-color image?",
+    guidingQuestion: "How do we convert the analog signal to a digital representation? Where do errors manifest?",
     whatHappens: [
       "Analog charge in each photosite is amplified and converted to a digital number (bit depth).",
       "Raising ISO increases amplification, making both signal and noise more visible in the final image.",
@@ -149,7 +149,7 @@ export const STAGES: StageConfig[] = [
     label: "Post-processing",
     path: "/post",
     icon: Palette,
-    guidingQuestion: "What happens after demosaicing?",
+    guidingQuestion: "How do we store and manipulate images? How do sensor design choices constrain our edits?",
     whatHappens: [
       "The linear sensor data is tone mapped into a viewable contrast curve.",
       "Color transforms move from sensor space to working space to output space.",

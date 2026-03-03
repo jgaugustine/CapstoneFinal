@@ -24,9 +24,8 @@ import {
   demosaicXTransKikuResidual,
   computeErrorStats
 } from '@/lib/demosaic';
-import { decodeDNG } from '@/lib/dngDecode';
 import { createZonePlate, createFineCheckerboard, createColorSweep, createStarburst, createDiagonalLines, createSineWaveGratings, createColorPatches, createColorFringes } from '@/lib/synthetic';
-import { Upload, Image as ImageIcon, FileCode, Grid3X3, ZoomIn, ZoomOut, RefreshCcw, Grid, Columns, Loader2 } from 'lucide-react';
+import { Upload, Image as ImageIcon, Grid3X3, ZoomIn, ZoomOut, RefreshCcw, Grid, Columns, Loader2 } from 'lucide-react';
 import { downsizeImageToDataURL } from '@/lib/imageResize';
 import { HelpTooltip } from '@/components/ui/HelpTooltip';
 import { TutorialTour } from '@/components/TutorialTour';
@@ -93,7 +92,7 @@ export default function Index() {
   });
 
   const [cfaType, setCfaType] = useState<CFAType>('bayer');
-  const [uiMode, setUiMode] = useState<'lab' | 'synthetic' | 'raw'>('synthetic');
+  const [uiMode, setUiMode] = useState<'lab' | 'synthetic'>('synthetic');
   const [benchmarkMode, setBenchmarkMode] = useState(false);
   const [syntheticType, setSyntheticType] = useState<string | null>(null);
   const [hoverPos, setHoverPos] = useState<{x: number, y: number} | null>(null);
@@ -198,7 +197,6 @@ export default function Index() {
   const inputIdRef = useRef<number>(0);
   
   const fileInputRefLab = useRef<HTMLInputElement>(null);
-  const fileInputRefRaw = useRef<HTMLInputElement>(null);
   
   const viewport1Ref = useRef<HTMLDivElement>(null);
   const viewport2Ref = useRef<HTMLDivElement>(null);
@@ -815,21 +813,6 @@ export default function Index() {
     }
   };
 
-  const handleDNGUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    try {
-      const dngInput = await decodeDNG(file);
-      setInput(dngInput);
-      setCfaType('bayer');
-      advanceTourOn("image-loaded");
-    } catch (err) {
-      console.error("DNG Decode failed", err);
-      const errorMessage = err instanceof Error ? err.message : "Failed to decode DNG. Ensure it's a valid raw file.";
-      alert(errorMessage);
-    }
-  };
-
   const handleSyntheticSelect = (type: string) => {
     setSyntheticType(type);
     const w = 512, h = 512;
@@ -847,7 +830,7 @@ export default function Index() {
   
   // Sync input CFA when user changes CFA Type
   useEffect(() => {
-    if (!input || input.mode === 'raw' || !input.groundTruthRGB) return;
+    if (!input || !input.groundTruthRGB) return;
     if (input.cfaPattern === cfaType) return;
     const newCfa = simulateCFA(input.groundTruthRGB, cfaType);
     setInput(prev => prev ? ({
@@ -948,19 +931,6 @@ export default function Index() {
     // Check if we already have CFA images cached for this input
     // We'll regenerate only if the input actually changed (handled by the dependency on input)
 
-    // For raw mode, we only have the input's CFA pattern
-    if (input.mode === 'raw') {
-      const img = generateCFAVisualization(input.cfaData, input.cfaPattern, input.width, input.height);
-    setCfaImage(img);
-      const newCfaImages: Record<CFAType, ImageData | null> = {
-        bayer: input.cfaPattern === 'bayer' ? img : null,
-        xtrans: input.cfaPattern === 'xtrans' ? img : null,
-        foveon: input.cfaPattern === 'foveon' ? img : null,
-      };
-      setCfaImages(newCfaImages);
-      return;
-    }
-
     // For lab/synthetic mode, we can generate CFAs for all patterns from ground truth
     if (input.groundTruthRGB) {
       const newCfaImages: Record<CFAType, ImageData | null> = {
@@ -1053,8 +1023,6 @@ export default function Index() {
         // Generate CFA from ground truth
         newCfaData = simulateCFA(inp.groundTruthRGB, cfa);
       } else {
-        // For raw mode, we can't generate a different CFA, so use the original
-        // This shouldn't happen in practice for algorithm-cfa-comparison mode
         newCfaData = inp.cfaData;
       }
       
@@ -1231,8 +1199,7 @@ export default function Index() {
 
   // Reset view mode when input changes or when ground truth becomes unavailable
   useEffect(() => {
-    if (!input || (input.mode !== 'lab' && input.mode !== 'synthetic')) {
-      // For raw mode or no input, default to reconstruction or CFA
+    if (!input) {
       if (viewMode === 'original') setViewMode('reconstruction');
     }
   }, [input, viewMode]);
@@ -1315,7 +1282,6 @@ export default function Index() {
                   <HelpTooltip className="h-3 w-3" content="
                     Synthetic: Mathematical patterns to test algorithms.
                     JPEG Lab: Standard images (JPG/PNG) treated as ground truth to simulate sensor sampling.
-                    Real Raw: Actual sensor data from DNG files.
                   " />
                 </h2>
               </CardHeader>
@@ -1324,7 +1290,7 @@ export default function Index() {
                   type="single" 
                   value={uiMode} 
                   onValueChange={(v) => {
-                    if (v && (v === 'synthetic' || v === 'raw' || v === 'lab')) {
+                    if (v && (v === 'synthetic' || v === 'lab')) {
                       setUiMode(v);
                     }
                   }}
@@ -1336,9 +1302,6 @@ export default function Index() {
                   </ToggleGroupItem>
                   <ToggleGroupItem value="lab" aria-label="JPEG Lab mode" className="flex-1 text-xs bg-background">
                     JPEG Lab
-                  </ToggleGroupItem>
-                  <ToggleGroupItem value="raw" aria-label="Real Raw mode" className="flex-1 text-xs bg-background">
-                    Real Raw
                   </ToggleGroupItem>
                 </ToggleGroup>
                 <div data-tour-id="benchmark-btn">
@@ -1398,19 +1361,6 @@ export default function Index() {
                   </div>
                 )}
 
-                {uiMode === 'raw' && (
-                  <div className="space-y-2">
-                    <Button variant="outline" className="w-full h-24 flex flex-col gap-2 border-dashed" onClick={() => fileInputRefRaw.current?.click()}>
-                      <FileCode className="w-8 h-8 mb-1 text-muted-foreground" />
-                      <div className="text-center">
-                        <span className="text-xs block font-medium">Upload RAW File</span>
-                        <span className="text-[10px] text-muted-foreground">(DNG)</span>
-                      </div>
-                    </Button>
-                    <input ref={fileInputRefRaw} type="file" accept=".dng,.tif" className="hidden" onChange={handleDNGUpload} />
-                  </div>
-                )}
-
                 {input && (
                   <div className="bg-muted/50 rounded p-2 text-xs font-mono flex justify-between mt-2">
                     <span>{input.width} x {input.height}</span><span className="uppercase">{input.mode} Mode</span>
@@ -1437,22 +1387,19 @@ export default function Index() {
                       advanceTourOn("cfa-changed");
                     }
                   }}
-                  disabled={input?.mode === 'raw'}
                   className="w-full"
                 >
                   <ToggleGroupItem 
                     value="bayer" 
                     aria-label="Bayer CFA" 
-                    className="flex-1 text-xs bg-background border border-input hover:bg-accent/60 hover:text-accent-foreground data-[state=on]:bg-accent data-[state=on]:text-accent-foreground" 
-                    disabled={input?.mode === 'raw'}
+                    className="flex-1 text-xs bg-background border border-input hover:bg-accent/60 hover:text-accent-foreground data-[state=on]:bg-accent data-[state=on]:text-accent-foreground"
                   >
                     Bayer (RGGB)
                   </ToggleGroupItem>
                   <ToggleGroupItem 
                     value="xtrans" 
                     aria-label="X-Trans CFA" 
-                    className="flex-1 text-xs bg-background border border-input hover:bg-accent/60 hover:text-accent-foreground data-[state=on]:bg-accent data-[state=on]:text-accent-foreground" 
-                    disabled={input?.mode === 'raw'}
+                    className="flex-1 text-xs bg-background border border-input hover:bg-accent/60 hover:text-accent-foreground data-[state=on]:bg-accent data-[state=on]:text-accent-foreground"
                   >
                     X-Trans (6x6)
                   </ToggleGroupItem>

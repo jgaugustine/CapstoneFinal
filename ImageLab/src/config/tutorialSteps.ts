@@ -8,7 +8,12 @@ export type TutorialTarget =
   | "layer-list"
   | "math-panel"
   | "pixel-inspector"
-  | "dechannel-btn";
+  | "dechannel-btn"
+  | "checkpoint-panel"
+  | "save-checkpoint-btn"
+  | "download-btn"
+  | "compare-view"
+  | "compare-checkpoint-btn";
 
 export type TutorialEvent =
   | "image-loaded"
@@ -17,7 +22,9 @@ export type TutorialEvent =
   | "layer-added"
   | "layer-reordered"
   | "conv-layer-added"
-  | "conv-layer-selected";
+  | "conv-layer-selected"
+  | "checkpoint-saved"
+  | "image-downloaded";
 
 export interface TutorialStep {
   id:
@@ -33,6 +40,9 @@ export interface TutorialStep {
     | "inspect-conv-math"
     | "math"
     | "dechannel"
+    | "checkpoints"
+    | "download"
+    | "compare"
     | "finish";
   title: string;
   body: ReactNode;
@@ -122,10 +132,30 @@ export const tutorialSteps: TutorialStep[] = [
     body: "Toggle the Dechannel button to split the image into its individual R, G, and B channels. This helps visualize how each transformation affects the color channels independently.",
   },
   {
+    id: "checkpoints",
+    title: "Edit checkpoints",
+    target: "checkpoint-panel",
+    body: "Save the current edit state as a checkpoint. You can revert to any saved checkpoint or compare it side-by-side with your current edits. Click \"Save\" to create a checkpoint now!",
+    advanceOn: "checkpoint-saved",
+  },
+  {
+    id: "download",
+    title: "Download your work",
+    target: "download-btn",
+    body: "Click Download to export the processed image at full resolution (PNG). The export uses the resolution of your working canvas. Switch to normal view first if you're in Dechannel mode.",
+    advanceOn: "image-downloaded",
+  },
+  {
+    id: "compare",
+    title: "Compare checkpoints",
+    target: "checkpoint-panel",
+    body: "Use the compare icon on any checkpoint to see it side-by-side with your current edits. The left panel shows the checkpoint state; the right shows the current result. Toggle compare again to exit.",
+  },
+  {
     id: "finish",
     title: "You're ready to explore",
     target: "center-overlay",
-    body: "Upload an image, stack transformations, inspect individual pixels, and see the math behind every operation. You can re-open this tour anytime from the header.",
+    body: "Upload an image, stack transformations, save checkpoints, download your work, and see the math behind every operation. You can re-open this tour anytime from the header.",
   },
 ];
 

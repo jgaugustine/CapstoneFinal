@@ -1,3 +1,4 @@
+import { Link } from "react-router-dom";
 import { useScrollSpy } from "@/hooks/useScrollSpy";
 import { STAGES } from "@/config/stages";
 import type { StageId } from "@/config/stages";
@@ -67,10 +68,18 @@ export function Header() {
           })}
         </nav>
 
-        {/* Right: subtle tagline or spacer */}
-        <span className="font-mono text-[10px] tracking-[0.15em] uppercase text-muted-foreground/50">
-          light → image
-        </span>
+        {/* Right: vocab button + tagline */}
+        <div className="flex items-center gap-4">
+          <Link
+            to="/vocab"
+            className="font-mono text-[10px] tracking-[0.15em] uppercase text-foreground/90 hover:text-foreground border border-border rounded-md px-2.5 py-1 transition-colors hover:bg-white/5 hover:border-foreground/30"
+          >
+            Vocab
+          </Link>
+          <span className="font-mono text-[10px] tracking-[0.15em] uppercase text-foreground/60">
+            light → image
+          </span>
+        </div>
       </div>
     </header>
   );

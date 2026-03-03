@@ -1,0 +1,542 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Executive Summary — Math & Photography | Grant Augustine</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,600;0,9..40,700;1,9..40,400&family=JetBrains+Mono:wght@500;600;700&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --background: hsl(224, 28%, 9%);
+      --foreground: hsl(210, 20%, 98%);
+      --muted-foreground: hsl(218, 18%, 65%);
+      --card: hsl(224, 26%, 13%);
+      --border: hsl(224, 24%, 22%);
+      --stage-light: hsl(25, 95%, 53%);
+      --stage-sensor: hsl(217, 91%, 60%);
+      --stage-readout: hsl(270, 91%, 65%);
+      --stage-post: hsl(142, 71%, 45%);
+      --section-light: hsl(25, 28%, 14%);
+      --section-sensor: hsl(217, 35%, 14%);
+      --section-readout: hsl(270, 30%, 14%);
+      --section-post: hsl(142, 25%, 14%);
+      --primary: hsl(172, 76%, 48%);
+      --radius: 0.5rem;
+    }
+    * { box-sizing: border-box; }
+    body {
+      font-family: 'DM Sans', system-ui, sans-serif;
+      background: var(--background);
+      color: var(--foreground);
+      line-height: 1.65;
+      margin: 0;
+      padding: 2.5rem 1.5rem;
+      min-height: 100vh;
+      font-size: 1.15rem;
+    }
+    .container { max-width: 920px; margin: 0 auto; }
+
+    /* Executive summary header */
+    .exec-summary {
+      margin-bottom: 2rem;
+      padding-bottom: 1.75rem;
+      border-bottom: 1px solid var(--border);
+    }
+    .exec-summary .doc-label {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 1.75rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      color: var(--foreground);
+      margin: 0 0 1.25rem 0;
+    }
+    .exec-summary .aims-lead {
+      font-size: 1.3rem;
+      color: var(--foreground);
+      margin: 0 0 1rem 0;
+      font-weight: 600;
+    }
+    .exec-summary .overview {
+      font-size: 1.15rem;
+      color: var(--muted-foreground);
+      margin: 0;
+      max-width: 65ch;
+    }
+    .exec-summary .project-description {
+      font-size: 1.15rem;
+      color: var(--muted-foreground);
+      margin: 1.25rem 0 0 0;
+      max-width: 65ch;
+    }
+    .exec-summary .site-link {
+      display: inline-block;
+      margin-top: 1rem;
+      font-size: 1.05rem;
+      color: var(--primary);
+      text-decoration: none;
+    }
+    .exec-summary .site-link:hover { text-decoration: underline; }
+
+    /* Pipeline stages */
+    .section-title {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 1.2rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--muted-foreground);
+      margin: 0 0 1rem 0;
+    }
+    .section-intro {
+      font-size: 1.15rem;
+      color: var(--muted-foreground);
+      margin: 0 0 1.25rem 0;
+      max-width: 58ch;
+    }
+    .pipeline {
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+      margin-bottom: 2rem;
+    }
+    .stage {
+      display: grid;
+      grid-template-columns: auto 1fr;
+      gap: 1.1rem;
+      align-items: start;
+      padding: 1.25rem 1.5rem;
+      border-radius: var(--radius);
+      border-left: 4px solid;
+    }
+    .stage + .stage { margin-top: 0.6rem; }
+    .stage.light { background: var(--section-light); border-color: var(--stage-light); }
+    .stage.sensor { background: var(--section-sensor); border-color: var(--stage-sensor); }
+    .stage.readout { background: var(--section-readout); border-color: var(--stage-readout); }
+    .stage.post { background: var(--section-post); border-color: var(--stage-post); }
+
+    .stage-icon {
+      width: 44px;
+      height: 44px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 6px;
+      flex-shrink: 0;
+    }
+    .stage.light .stage-icon { color: var(--stage-light); }
+    .stage.sensor .stage-icon { color: var(--stage-sensor); }
+    .stage.readout .stage-icon { color: var(--stage-readout); }
+    .stage.post .stage-icon { color: var(--stage-post); }
+
+    .stage-body h3 {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 1.2rem;
+      font-weight: 600;
+      margin: 0 0 0.3rem 0;
+    }
+    .stage-body .question {
+      font-size: 1.1rem;
+      color: var(--muted-foreground);
+      margin: 0 0 0.4rem 0;
+    }
+    .stage-body .concepts {
+      font-size: 1.05rem;
+      color: var(--muted-foreground);
+      margin: 0.25rem 0 0 0;
+    }
+    .stage-body .concepts ul {
+      margin: 0;
+      padding-left: 1.15rem;
+    }
+    .stage-body .concepts li { margin-bottom: 0.2rem; }
+    .stage-body .concepts li:last-child { margin-bottom: 0; }
+    .stage-body .concepts strong { color: var(--foreground); }
+
+    /* Labs grid */
+    .labs-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+      gap: 0.9rem;
+      margin-bottom: 2rem;
+    }
+    .lab-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.2rem;
+      display: flex;
+      align-items: flex-start;
+      gap: 0.9rem;
+      text-decoration: none;
+      color: inherit;
+      transition: border-color 0.15s, background 0.15s;
+    }
+    .lab-card:hover {
+      border-color: var(--primary);
+      background: hsl(224, 26%, 16%);
+    }
+    .lab-card .lab-icon {
+      width: 36px;
+      height: 36px;
+      flex-shrink: 0;
+      color: var(--muted-foreground);
+    }
+    .lab-card h4 {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 1.1rem;
+      font-weight: 600;
+      margin: 0 0 0.3rem 0;
+    }
+    .lab-card p {
+      font-size: 1rem;
+      color: var(--muted-foreground);
+      margin: 0 0 0.35rem 0;
+      line-height: 1.45;
+    }
+    .lab-card ul {
+      margin: 0;
+      padding-left: 1.1rem;
+      font-size: 0.95rem;
+      color: var(--muted-foreground);
+      line-height: 1.4;
+    }
+    .lab-card li { margin-bottom: 0.15rem; }
+
+    /* Two-column footer */
+    .footer-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 2rem;
+      margin-top: 2rem;
+    }
+    @media (max-width: 600px) {
+      .footer-grid { grid-template-columns: 1fr; }
+    }
+    .footer-block h3 {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.95rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--muted-foreground);
+      margin: 0 0 0.5rem 0;
+    }
+    .footer-block ul {
+      margin: 0;
+      padding-left: 1.25rem;
+      font-size: 1.15rem;
+      color: var(--muted-foreground);
+    }
+    .footer-block li { margin-bottom: 0.25rem; }
+    .footer-block a { color: var(--primary); text-decoration: none; }
+    .footer-block a:hover { text-decoration: underline; }
+
+    /* Two-column layout: pipeline left, labs right */
+    .print-body {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 2rem;
+      align-items: start;
+    }
+    @media (max-width: 700px) {
+      .print-body { grid-template-columns: 1fr; }
+    }
+
+    /* Print: fit on letter (8.5" × 11") */
+    @media print {
+      @page {
+        size: letter;
+        margin: 0.25in;
+      }
+      .print-body {
+        gap: 0.4in;
+      }
+      body {
+        padding: 0;
+        font-size: 9pt;
+        line-height: 1.4;
+        min-height: auto;
+        background: white !important;
+        color: black !important;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+      }
+      .container { max-width: 100%; page-break-inside: avoid; }
+      .exec-summary,
+      .exec-summary .doc-label,
+      .exec-summary .aims-lead,
+      .exec-summary .overview,
+      .exec-summary .project-description,
+      .exec-summary .project-description strong,
+      .section-title,
+      .section-intro,
+      .diagram-caption,
+      .stage-body .question,
+      .stage-body .concepts,
+      .stage-body .concepts li,
+      .stage-body h3,
+      .lab-card h4,
+      .lab-card p,
+      .lab-card li,
+      .footer-block,
+      .footer-block h3,
+      .footer-block ul,
+      .footer-block li,
+      .footer-block li strong,
+      .footer-block a {
+        color: black !important;
+      }
+      .stage {
+        background: #f5f5f5 !important;
+        border-color: #333 !important;
+      }
+      .stage.light { border-left-color: #c2410c !important; }
+      .stage.sensor { border-left-color: #2563eb !important; }
+      .stage.readout { border-left-color: #7c3aed !important; }
+      .stage.post { border-left-color: #15803d !important; }
+      .lab-card {
+        background: #f5f5f5 !important;
+        border-color: #333 !important;
+      }
+      a { color: black !important; text-decoration: underline; }
+
+      .exec-summary {
+        margin-bottom: 0.6rem;
+        padding-bottom: 0.6rem;
+      }
+      .exec-summary .doc-label { font-size: 11pt; margin-bottom: 0.5rem; }
+      .exec-summary .aims-lead { font-size: 9.5pt; margin-bottom: 0.3rem; }
+      .exec-summary .overview { font-size: 8.5pt; max-width: none; }
+      .exec-summary .project-description { font-size: 7.5pt; margin-top: 0.5rem; max-width: none; }
+      .exec-summary .site-link { margin-top: 0.4rem; font-size: 8pt; }
+
+      .section-title { font-size: 8.5pt; margin: 0.5rem 0 0.35rem 0; }
+      .section-intro { font-size: 8pt; margin: 0 0 0.5rem 0; }
+      .section-intro[style] { font-size: 7pt !important; margin-top: -0.2rem !important; }
+
+      .pipeline { margin-bottom: 0.6rem; }
+      .stage {
+        padding: 0.4rem 0.6rem;
+        gap: 0.5rem;
+        break-inside: avoid;
+      }
+      .stage + .stage { margin-top: 0.25rem; }
+      .stage-icon { width: 24px; height: 24px; }
+      .stage-icon svg { width: 14px; height: 14px; }
+      .stage-body h3 { font-size: 8.5pt; margin-bottom: 0.1rem; }
+      .stage-body .question { font-size: 8pt; margin-bottom: 0.15rem; }
+      .stage-body .concepts { font-size: 7.5pt; }
+      .stage-body .concepts ul { padding-left: 1rem; }
+      .stage-body .concepts li { margin-bottom: 0.1rem; }
+
+      .labs-grid {
+        grid-template-columns: 1fr;
+        gap: 0.3rem;
+        margin-bottom: 0.5rem;
+      }
+      .lab-card {
+        padding: 0.4rem 0.5rem;
+        gap: 0.4rem;
+        break-inside: avoid;
+        pointer-events: none;
+      }
+      .lab-card .lab-icon { width: 20px; height: 20px; }
+      .lab-card .lab-icon svg { width: 14px; height: 14px; }
+      .lab-card h4 { font-size: 8pt; margin-bottom: 0.1rem; }
+      .lab-card p { font-size: 7pt; }
+      .lab-card ul { font-size: 6.5pt; padding-left: 0.9rem; }
+      .lab-card li { margin-bottom: 0.08rem; }
+
+      .footer-grid { margin-top: 0.6rem; gap: 1rem; }
+      .footer-block h3 { font-size: 6.5pt; margin-bottom: 0.25rem; }
+      .footer-block ul { font-size: 8pt; }
+      .footer-block li { margin-bottom: 0.15rem; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header class="exec-summary">
+      <p class="doc-label">Executive Summary</p>
+      <p class="aims-lead">This project aims to help people understand how a camera turns light into a photo.</p>
+      <p class="overview">
+        Most of us take pictures every day, but few know what happens inside the camera. This capstone is an interactive educational website that explains the full journey—from light hitting the lens to the final image on your screen. It combines articles (for deeper reading) and hands-on labs (where you adjust settings and see results in real time) so you can read, play, and learn at your own pace.
+      </p>
+      <p class="project-description">
+        <strong>What is it?</strong> A web-based learning platform built around the four stages of the digital image pipeline: Light & Exposure, Sensor & Metering, Digitization & Demosaicing, and Post-processing. Each stage has guided articles and at least one interactive lab. The site is designed for photographers who want to understand their gear, students of imaging or computer vision, and anyone curious about how cameras work.
+      </p>
+      <a class="site-link" href="https://grantcapstone.netlify.app/">→ Visit the project: grantcapstone.netlify.app</a>
+    </header>
+
+    <div class="print-body">
+    <div class="print-col">
+    <h2 class="section-title">The Digital Image Pipeline</h2>
+    <p class="section-intro">Light passes through four stages before it becomes a viewable image. Each stage answers a key question.</p>
+    <div class="pipeline">
+      <article class="stage light">
+        <div class="stage-icon" aria-hidden>
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></svg>
+        </div>
+        <div class="stage-body">
+          <h3>Light & Exposure</h3>
+          <p class="question">How do we model light?</p>
+          <div class="concepts"><strong>Key ideas:</strong>
+            <ul>
+              <li>Photons → electrons at each photosite</li>
+              <li>Shutter, aperture, and ISO control how much light reaches the sensor</li>
+              <li>Shot noise: random photon arrival limits shadow cleanliness</li>
+              <li>Quantum efficiency: how well the sensor converts light to charge</li>
+            </ul>
+          </div>
+        </div>
+      </article>
+
+      <article class="stage sensor">
+        <div class="stage-icon" aria-hidden>
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="16" height="16" x="4" y="4" rx="2" ry="2"/><rect width="6" height="6" x="9" y="9" rx="1"/><path d="M15 2v2"/><path d="M15 20v2"/><path d="M2 15h2"/><path d="M2 9h2"/><path d="M20 15h2"/><path d="M20 9h2"/><path d="M9 2v2"/><path d="M9 20v2"/></svg>
+        </div>
+        <div class="stage-body">
+          <h3>Sensor & Metering</h3>
+          <p class="question">How do we convert photons → electrons → signal? How do hardware constraints shape the output?</p>
+          <div class="concepts"><strong>Key ideas:</strong>
+            <ul>
+              <li>Color filter arrays (Bayer, X-Trans, Foveon) sample one color per pixel</li>
+              <li>Each photosite sees only red, green, or blue</li>
+              <li>Exposure value (EV) ties shutter and aperture together</li>
+              <li>Metering modes (matrix, spot, center-weighted) choose which areas drive exposure</li>
+            </ul>
+          </div>
+        </div>
+      </article>
+
+      <article class="stage readout">
+        <div class="stage-icon" aria-hidden>
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="4" height="6" x="2" y="6" rx="1"/><rect width="4" height="6" x="10" y="6" rx="1"/><rect width="4" height="6" x="18" y="6" rx="1"/><rect width="4" height="6" x="6" y="14" rx="1"/><rect width="4" height="6" x="14" y="14" rx="1"/></svg>
+        </div>
+        <div class="stage-body">
+          <h3>Digitization & Demosaicing</h3>
+          <p class="question">How do we convert the analog signal to a digital representation? Where do errors manifest?</p>
+          <div class="concepts"><strong>Key ideas:</strong>
+            <ul>
+              <li>Charge → digital numbers (bit depth)</li>
+              <li>Demosaicing algorithms fill in missing colors</li>
+              <li>Well capacity and read noise set dynamic range limits</li>
+              <li>ISO amplification makes signal and noise more visible</li>
+            </ul>
+          </div>
+        </div>
+      </article>
+
+      <article class="stage post">
+        <div class="stage-icon" aria-hidden>
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="13.5" cy="6.5" r=".5" fill="currentColor"/><circle cx="17.5" cy="10.5" r=".5" fill="currentColor"/><circle cx="8.5" cy="7.5" r=".5" fill="currentColor"/><circle cx="6.5" cy="12.5" r=".5" fill="currentColor"/><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.648 0-.437-.18-.835-.437-1.125-.29-.289-.438-.652-.438-1.125a1.64 1.64 0 0 1 1.668-1.668h1.996c3.051 0 5.555-2.503 5.555-5.555C21.965 6.012 17.461 2 12 2z"/></svg>
+        </div>
+        <div class="stage-body">
+          <h3>Post-processing</h3>
+          <p class="question">How do we store and manipulate images? How do sensor design choices constrain our edits?</p>
+          <div class="concepts"><strong>Key ideas:</strong>
+            <ul>
+              <li>Tone mapping: linear sensor data → viewable contrast</li>
+              <li>Color transforms (sensor → working → output space)</li>
+              <li>Non-destructive editing preserves the original capture</li>
+              <li>Output for screen or print with appropriate color profiles</li>
+            </ul>
+          </div>
+        </div>
+      </article>
+    </div>
+    <p class="section-intro diagram-caption" style="margin-top: -0.5rem; font-size: 1rem; color: var(--muted-foreground); opacity: 0.9;">
+      <em>Diagram: the four stages of the camera signal chain, from light to final image.</em>
+    </p>
+    </div>
+    <div class="print-col">
+    <h2 class="section-title">Interactive Labs</h2>
+    <p class="section-intro">The project aims to make learning hands-on. Four labs let you adjust settings and see results in real time.</p>
+    <div class="labs-grid">
+      <a class="lab-card" href="https://grantcapstone.netlify.app/labs/exposure">
+        <div class="lab-icon" aria-hidden>
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg>
+        </div>
+        <div>
+          <h4>ExposureLAB</h4>
+          <p>Adjust shutter, aperture, and ISO—see how each affects the image</p>
+          <ul>
+            <li>Real-time exposure triangle simulator</li>
+            <li>Compare different metering scenarios</li>
+          </ul>
+        </div>
+      </a>
+      <a class="lab-card" href="https://grantcapstone.netlify.app/labs/bit-depth">
+        <div class="lab-icon" aria-hidden>
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="16" height="16" x="4" y="4" rx="2" ry="2"/><rect width="6" height="6" x="9" y="9" rx="1"/></svg>
+        </div>
+        <div>
+          <h4>BitDepthVisualizer</h4>
+          <p>See how many shades of gray a sensor can capture</p>
+          <ul>
+            <li>Compare 8-bit vs 12-bit vs 14-bit</li>
+            <li>Visualize quantization and posterization</li>
+          </ul>
+        </div>
+      </a>
+      <a class="lab-card" href="https://grantcapstone.netlify.app/labs/demosaic">
+        <div class="lab-icon" aria-hidden>
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="4" height="6" x="2" y="6" rx="1"/><rect width="4" height="6" x="10" y="6" rx="1"/><rect width="4" height="6" x="18" y="6" rx="1"/><rect width="4" height="6" x="6" y="14" rx="1"/><rect width="4" height="6" x="14" y="14" rx="1"/></svg>
+        </div>
+        <div>
+          <h4>DemosaicLab</h4>
+          <p>See how raw sensor data becomes full-color pixels</p>
+          <ul>
+            <li>Compare demosaicing algorithms (bilinear, nearest-neighbor, etc.)</li>
+            <li>Upload test images or use built-in patterns</li>
+          </ul>
+        </div>
+      </a>
+      <a class="lab-card" href="https://grantcapstone.netlify.app/labs/image">
+        <div class="lab-icon" aria-hidden>
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="13.5" cy="6.5" r=".5"/><circle cx="17.5" cy="10.5" r=".5"/><circle cx="8.5" cy="7.5" r=".5"/><circle cx="6.5" cy="12.5" r=".5"/><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.648 0-.437-.18-.835-.437-1.125-.29-.289-.438-.652-.438-1.125a1.64 1.64 0 0 1 1.668-1.668h1.996c3.051 0 5.555-2.503 5.555-5.555C21.965 6.012 17.461 2 12 2z"/></svg>
+        </div>
+        <div>
+          <h4>ImageLab</h4>
+          <p>Explore tone mapping, color, and image compression</p>
+          <ul>
+            <li>Tone curves, hue/saturation, and color transforms</li>
+            <li>Compression and upsampling visualization</li>
+          </ul>
+        </div>
+      </a>
+    </div>
+
+    <div class="footer-grid print-footer">
+      <div class="footer-block">
+        <h3>Math Concepts</h3>
+        <ul>
+          <li>Photon statistics, shot noise, signal-to-noise ratio</li>
+          <li>Exposure value and logarithmic scales</li>
+          <li>Gaussian kernels for blur and center-weighted metering</li>
+          <li>Convolution, kernel matrices, dot products over neighborhoods</li>
+          <li>Gradient operators (Sobel, Prewitt, Laplacian) for edges</li>
+          <li>RGB as vectors, luminance as weighted combination</li>
+          <li>Color space transforms, HSL rotations</li>
+          <li>Bilinear and polynomial interpolation for demosaicing</li>
+          <li>Quantization, bit depth, PSNR, MSE</li>
+          <li>Live at <a href="https://grantcapstone.netlify.app/">grantcapstone.netlify.app</a></li>
+        </ul>
+      </div>
+      <div class="footer-block">
+        <h3>Who It's For</h3>
+        <ul>
+          <li><strong>Photographers</strong> who want to understand their gear</li>
+          <li><strong>Students and educators</strong> looking for alternative applications of math</li>
+          <li><strong>Hobbyists</strong> curious about camera technology</li>
+        </ul>
+      </div>
+    </div>
+    </div>
+    </div>
+  </div>
+</body>
+</html>

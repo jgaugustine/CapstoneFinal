@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from "react";
 import { PixelInspector } from "./PixelInspector";
 import { TransformationType, RGB, FilterInstance, FilterKind, BlurParams, SharpenParams, EdgeParams, DenoiseParams, CustomConvParams } from "@/types/transformations";
 import { cpuConvolutionBackend } from "@/lib/convolutionBackend";
@@ -39,6 +39,10 @@ interface ImageCanvasProps {
   previewOriginal?: boolean;
   // When true, show the image as 3 separate RGB channel panels
   dechanneled?: boolean;
+}
+
+export interface ImageCanvasRef {
+  exportToBlob: (type?: "image/png" | "image/jpeg", quality?: number) => Promise<Blob | null>;
 }
 
 interface InspectorData {
@@ -396,13 +400,26 @@ const applyHue = (rgb: RGB, value: number): RGB => {
   return applyMatrix(rgb, matrix);
 };
 
-export function ImageCanvas({ image, pipeline, onSelectInstance, selectedInstanceId, brightness, contrast, saturation, hue, whites = 0, blacks = 0, linearSaturation = false, vibrance = 0, transformOrder, enableInspector = true, onPixelSelect, onSelectConvAnalysis, previewOriginal = false, dechanneled = false }: ImageCanvasProps) {
+export const ImageCanvas = forwardRef<ImageCanvasRef, ImageCanvasProps>(function ImageCanvas(
+  { image, pipeline, onSelectInstance, selectedInstanceId, brightness, contrast, saturation, hue, whites = 0, blacks = 0, linearSaturation = false, vibrance = 0, transformOrder, enableInspector = true, onPixelSelect, onSelectConvAnalysis, previewOriginal = false, dechanneled = false },
+  ref
+) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const rChannelRef = useRef<HTMLCanvasElement>(null);
   const gChannelRef = useRef<HTMLCanvasElement>(null);
   const bChannelRef = useRef<HTMLCanvasElement>(null);
   const [inspectorData, setInspectorData] = useState<InspectorData | null>(null);
   const originalImageDataRef = useRef<ImageData | null>(null);
+
+  useImperativeHandle(ref, () => ({
+    exportToBlob: async (type: "image/png" | "image/jpeg" = "image/png", quality = 0.92): Promise<Blob | null> => {
+      const canvas = dechanneled ? null : canvasRef.current;
+      if (!canvas) return null;
+      return new Promise((resolve) => {
+        canvas.toBlob((blob) => resolve(blob), type, type === "image/jpeg" ? quality : undefined);
+      });
+    },
+  }), [dechanneled]);
 
   const getTransformValue = (type: TransformationType): number => {
     switch (type) {
@@ -1238,5 +1255,5 @@ export function ImageCanvas({ image, pipeline, onSelectInstance, selectedInstanc
       )}
     </>
   );
-}
+});
 

@@ -19,13 +19,21 @@ export default function Article() {
     <div className="min-h-screen flex flex-col">
       <Header />
       <main className="flex-1 max-w-3xl mx-auto w-full px-6 py-12">
-        <Link
-          to="/"
-          className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground mb-8"
-        >
-          <ArrowLeft className="h-4 w-4" />
-          Back to Capstone
-        </Link>
+        <div className="flex flex-wrap items-center gap-4 mb-8">
+          <Link
+            to="/"
+            className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            Back to Capstone
+          </Link>
+          <Link
+            to="/vocab"
+            className="text-sm text-muted-foreground hover:text-foreground"
+          >
+            Vocabulary
+          </Link>
+        </div>
         {content === null ? (
           <p className="text-muted-foreground">Loading…</p>
         ) : (
