@@ -17,16 +17,18 @@ const App = () => {
   const [tutorialActive, setTutorialActive] = useState(false);
   const [tutorialCompleted, setTutorialCompleted] = useState(false);
 
+  const TUTORIAL_KEY = "exposurelab:tour-seen";
+
   useEffect(() => {
     if (typeof window === "undefined") return;
     const params = new URLSearchParams(window.location.search);
     const forceReset = params.get("resetTour") === "1";
     if (forceReset) {
-      window.localStorage.removeItem("exposurelab_tutorial_completed");
+      try { window.sessionStorage.removeItem(TUTORIAL_KEY); } catch {}
       window.history.replaceState({}, "", window.location.pathname);
     }
     const completed = !forceReset &&
-      window.localStorage.getItem("exposurelab_tutorial_completed") === "1";
+      window.sessionStorage.getItem(TUTORIAL_KEY) === "1";
     setTutorialCompleted(completed);
     if (!completed) {
       const first = getFirstTutorialStepId();
@@ -42,7 +44,7 @@ const App = () => {
     setTutorialActive(false);
     setTutorialStepId(null);
     if (typeof window !== "undefined") {
-      window.localStorage.setItem("exposurelab_tutorial_completed", "1");
+      try { window.sessionStorage.setItem(TUTORIAL_KEY, "1"); } catch {}
     }
   }, []);
 
@@ -98,7 +100,7 @@ const App = () => {
     <QueryClientProvider client={queryClient}>
       <div className="min-h-screen flex flex-col">
         <header className="shrink-0 border-b bg-background px-4 py-2">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-3">
             <a
               href="/"
               target="_top"
@@ -107,6 +109,14 @@ const App = () => {
             >
               ← Back to Capstone
             </a>
+            <div className="flex flex-col gap-0.5">
+              <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
+                Lab
+              </span>
+              <span className="text-sm font-semibold text-foreground">
+                ExposureLAB
+              </span>
+            </div>
             <div className="ml-auto flex items-center gap-2">
               <button
                 type="button"

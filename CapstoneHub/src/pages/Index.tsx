@@ -110,7 +110,7 @@ export default function Index() {
         {/* Scroll area with scroll-snap */}
         <div
           ref={scrollContainerRef}
-          className="flex-1 min-w-0 overflow-y-auto overflow-x-hidden scroll-smooth snap-y snap-proximity bg-background"
+          className="flex-1 min-w-0 min-h-0 overflow-y-auto overflow-x-hidden scroll-smooth snap-y snap-proximity bg-background"
         >
           <div className="flex min-h-full flex-col min-w-0">
           {/* Hero: pipeline diagram image */}

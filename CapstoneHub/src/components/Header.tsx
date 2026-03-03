@@ -1,4 +1,4 @@
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import { useScrollSpy } from "@/hooks/useScrollSpy";
 import { STAGES } from "@/config/stages";
 import type { StageId } from "@/config/stages";
@@ -14,21 +14,26 @@ function handleStageClick(event: MouseEvent<HTMLAnchorElement>, id: StageId) {
 
 export function Header() {
   const activeStage = useScrollSpy();
+  const location = useLocation();
+  const isHome = location.pathname === "/";
 
   return (
     <header className="sticky top-0 z-50 w-full border-b border-border/50 bg-background/80 backdrop-blur-md">
       <div className="mx-auto flex h-14 max-w-[1200px] items-center justify-between px-6 md:px-12">
         {/* Wordmark */}
-        <a
-          href="#"
+        <Link
+          to="/"
           onClick={(e) => {
-            e.preventDefault();
-            window.scrollTo({ top: 0, behavior: "smooth" });
+            if (isHome) {
+              e.preventDefault();
+              const first = document.getElementById("light");
+              if (first) first.scrollIntoView({ behavior: "smooth", block: "start" });
+            }
           }}
           className="font-mono text-sm font-semibold tracking-[0.2em] uppercase text-foreground transition-opacity hover:opacity-80"
         >
           Capstone
-        </a>
+        </Link>
 
         {/* Pipeline chain: 5 stages as connected beads */}
         <nav
