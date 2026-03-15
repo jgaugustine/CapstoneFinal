@@ -84,6 +84,7 @@ export default function Lab({ tutorial }: LabProps) {
   const [allocationLog, setAllocationLog] = useState<AllocationLog | null>(null);
   const [simOutput, setSimOutput] = useState<SimOutput | null>(null);
   const [showClipping, setShowClipping] = useState(false);
+  const [showWeightOverlay, setShowWeightOverlay] = useState(false);
   const [isRendering, setIsRendering] = useState(false);
   const [isImageUploading, setIsImageUploading] = useState(false);
   const rafIdRef = useRef<number>(0);
@@ -374,6 +375,9 @@ export default function Lab({ tutorial }: LabProps) {
                   setMeteringMode(mode);
                   tutorial?.onEvent('metering-changed');
                 }}
+                showWeightOverlay={showWeightOverlay}
+                onShowWeightOverlayToggle={() => setShowWeightOverlay((v) => !v)}
+                showMeteringDisabled={!scene || !meteringWeights}
               />
 
               <Card data-tour-id="sim-output">
@@ -418,6 +422,7 @@ export default function Lab({ tutorial }: LabProps) {
                 canvasDisplayWidth={canvasDisplayWidth}
                 isUploading={isImageUploading}
                 meteringWeights={meteringWeights}
+                showWeightOverlay={showWeightOverlay}
               />
 
               <SimParamsPanel simParams={simParams} onSimParamsChange={setSimParams} />

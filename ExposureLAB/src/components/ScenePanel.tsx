@@ -20,6 +20,7 @@ interface ScenePanelProps {
   canvasDisplayWidth?: number;
   isUploading?: boolean;
   meteringWeights?: WeightMap | null;
+  showWeightOverlay?: boolean;
 }
 
 export function ScenePanel({
@@ -32,12 +33,12 @@ export function ScenePanel({
   canvasDisplayWidth,
   isUploading = false,
   meteringWeights = null,
+  showWeightOverlay = false,
 }: ScenePanelProps) {
   const radialMasks = scene?.radialMasks || [];
   const linearMasks = scene?.linearMasks || [];
   const [maskDrawingMode, setMaskDrawingMode] = useState<'radial' | 'linear' | null>(null);
   const [showMaskOverlay, setShowMaskOverlay] = useState(true);
-  const [showWeightOverlay, setShowWeightOverlay] = useState(false);
 
   // Apply scene illumination and masks to the displayed image as well,
   // so the scene canvas matches what is being simulated.
@@ -126,14 +127,6 @@ export function ScenePanel({
         <div className="flex items-center justify-between gap-2">
           <CardTitle>Scene</CardTitle>
           <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setShowWeightOverlay((prev) => !prev)}
-              disabled={!scene || !meteringWeights}
-            >
-              {showWeightOverlay ? 'Hide' : 'Show'} metering
-            </Button>
             <Button
               variant="outline"
               size="sm"

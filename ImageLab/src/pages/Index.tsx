@@ -208,13 +208,13 @@ export default function Index(_props: IndexProps) {
           {/* Left Panel - Image & Controls */}
           <div className="space-y-6">
             <Card className="p-6 border-border bg-card" data-tour-id="image-preview">
-              <div className="mb-4 flex items-center justify-between gap-2">
-                <h2 className="text-xl font-semibold text-primary flex items-center gap-2">
+              <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
+                <h2 className="text-xl font-semibold text-primary flex items-center gap-2 shrink-0">
                   <Upload className="w-5 h-5" />
                   Image Preview
                 </h2>
             {image && (
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2 min-w-0 justify-end">
                 <Button
                   className="shrink-0"
                   variant={dechanneled ? "default" : "outline"}

@@ -155,11 +155,18 @@ export function InteractiveSceneCanvas({
     ctx.putImageData(imageData, 0, 0);
 
     // Draw metering weight map overlay (cyan tint: higher weight = more visible)
+    // Weights are normalized (sum=1), so use relative weight (w/max) for visibility
     if (showWeightOverlay && meteringWeights && meteringWeights.length === image.width * image.height) {
-      const overlay = ctx.createImageData(image.width, image.height);
+      let maxW = 0;
       for (let i = 0; i < meteringWeights.length; i++) {
         const w = meteringWeights[i];
-        const alpha = Math.round(w * 120); // max ~47% opacity for weight=1
+        if (w > maxW) maxW = w;
+      }
+      const overlay = ctx.createImageData(image.width, image.height);
+      const scale = maxW > 0 ? 120 / maxW : 0;
+      for (let i = 0; i < meteringWeights.length; i++) {
+        const w = meteringWeights[i];
+        const alpha = Math.round(w * scale); // relative weight → max ~47% opacity
         const idx = i * 4;
         overlay.data[idx] = 0;     // R
         overlay.data[idx + 1] = 200; // G (cyan)

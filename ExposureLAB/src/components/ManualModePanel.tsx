@@ -132,6 +132,11 @@ export function ManualModePanel({
     return `1/${Math.round(1 / shutter)}s`;
   };
 
+  // In auto modes, some controls are set by the algorithm — show value only (no slider).
+  const shutterSetByAlgorithm = programMode === 'auto_ae' || programMode === 'aperture_priority';
+  const apertureSetByAlgorithm = programMode === 'auto_ae' || programMode === 'shutter_priority';
+  const isoSetByAlgorithm = programMode === 'auto_ae' || programMode === 'manual_auto_iso';
+
   // Helpers for auto modes: solve for the missing parameter at the reference EV and quantize
   const solveShutterForRefEV = (aperture: number, iso: number): number => {
     const rawShutter = (Math.pow(2, evRef) * aperture * aperture) / (iso / 100);
@@ -213,35 +218,33 @@ export function ManualModePanel({
         <ExposureTriangle settings={settings} className="mt-4 pt-4 border-t border-border" />
       </CardHeader>
       <CardContent className="space-y-6">
-        {(programMode === 'manual' ||
-          programMode === 'shutter_priority' ||
-          programMode === 'manual_auto_iso' ||
-          programMode === 'auto_ae') && (
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <Label
-                htmlFor="shutter"
-                title="Controls how long the sensor gathers light; each doubling/halving of time changes exposure by 1 EV."
-              >
-                Shutter Speed
-              </Label>
-              <span className="text-sm font-mono">
-                {formatShutter(settings.shutterSeconds)}
-              </span>
-            </div>
+        {/* Shutter: slider when user-controlled, read-only when set by AE/Av */}
+        <div className="space-y-2">
+          <div className="flex items-center justify-between">
+            <Label
+              htmlFor="shutter"
+              title="Controls how long the sensor gathers light; each doubling/halving of time changes exposure by 1 EV."
+            >
+              Shutter Speed
+              {shutterSetByAlgorithm && (
+                <span className="ml-1.5 text-xs font-normal text-muted-foreground">(set by camera)</span>
+              )}
+            </Label>
+            <span className="text-sm font-mono">
+              {formatShutter(settings.shutterSeconds)}
+            </span>
+          </div>
+          {!shutterSetByAlgorithm && (
             <Slider
               id="shutter"
-              disabled={mode === 'ae' && programMode === 'auto_ae'}
               value={[shutterToSlider(settings.shutterSeconds)]}
               onValueChange={([value]) => {
                 const newShutter = sliderToShutter(value);
                 let next = { ...settings, shutterSeconds: newShutter };
 
                 if (programMode === 'manual_auto_iso') {
-                  // M + Auto ISO: user controls shutter/aperture, ISO is computed
                   next.iso = solveISOForRefEV(next.shutterSeconds, next.aperture);
                 } else if (programMode === 'shutter_priority') {
-                  // Tv: user controls shutter/ISO, aperture is computed
                   next.aperture = solveApertureForRefEV(next.shutterSeconds, next.iso);
                 }
 
@@ -251,41 +254,36 @@ export function ManualModePanel({
               max={100}
               step={1}
             />
-          </div>
-        )}
+          )}
+        </div>
 
-        {(programMode === 'manual' ||
-          programMode === 'aperture_priority' ||
-          programMode === 'manual_auto_iso' ||
-          programMode === 'auto_ae') && (
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <Label
-                htmlFor="aperture"
-                title="Controls how wide the lens opens; each full stop lets in twice or half as much light and also changes depth of field."
-              >
-                Aperture (f-number)
-              </Label>
-              <span className="text-sm font-mono">
-                f/{settings.aperture.toFixed(1)}
-              </span>
-            </div>
+        {/* Aperture: slider when user-controlled, read-only when set by AE/Tv */}
+        <div className="space-y-2">
+          <div className="flex items-center justify-between">
+            <Label
+              htmlFor="aperture"
+              title="Controls how wide the lens opens; each full stop lets in twice or half as much light and also changes depth of field."
+            >
+              Aperture (f-number)
+              {apertureSetByAlgorithm && (
+                <span className="ml-1.5 text-xs font-normal text-muted-foreground">(set by camera)</span>
+              )}
+            </Label>
+            <span className="text-sm font-mono">
+              f/{settings.aperture.toFixed(1)}
+            </span>
+          </div>
+          {!apertureSetByAlgorithm && (
             <Slider
               id="aperture"
-              disabled={mode === 'ae' && programMode === 'auto_ae'}
               value={[apertureToSlider(settings.aperture)]}
               onValueChange={([value]) => {
                 const newAperture = sliderToAperture(value);
                 let next = { ...settings, aperture: newAperture };
 
                 if (programMode === 'aperture_priority') {
-                  // Av: user controls aperture/ISO, shutter is computed
-                  next.shutterSeconds = solveShutterForRefEV(
-                    next.aperture,
-                    next.iso
-                  );
+                  next.shutterSeconds = solveShutterForRefEV(next.aperture, next.iso);
                 } else if (programMode === 'manual_auto_iso') {
-                  // M + Auto ISO: user controls shutter/aperture, ISO is computed
                   next.iso = solveISOForRefEV(next.shutterSeconds, next.aperture);
                 }
 
@@ -295,43 +293,35 @@ export function ManualModePanel({
               max={100}
               step={1}
             />
-          </div>
-        )}
+          )}
+        </div>
 
-        {(programMode === 'manual' ||
-          programMode === 'aperture_priority' ||
-          programMode === 'shutter_priority' ||
-          programMode === 'auto_ae') && (
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <Label
-                htmlFor="iso"
-                title="Amplifies the sensor signal; higher ISO brightens the image but increases noise, in EV steps like shutter and aperture."
-              >
-                ISO
-              </Label>
-              <span className="text-sm font-mono">{settings.iso}</span>
-            </div>
+        {/* ISO: slider when user-controlled, read-only when set by AE or Auto ISO */}
+        <div className="space-y-2">
+          <div className="flex items-center justify-between">
+            <Label
+              htmlFor="iso"
+              title="Amplifies the sensor signal; higher ISO brightens the image but increases noise, in EV steps like shutter and aperture."
+            >
+              ISO
+              {isoSetByAlgorithm && (
+                <span className="ml-1.5 text-xs font-normal text-muted-foreground">(set by camera)</span>
+              )}
+            </Label>
+            <span className="text-sm font-mono">{settings.iso}</span>
+          </div>
+          {!isoSetByAlgorithm && (
             <Slider
               id="iso"
-              disabled={mode === 'ae' && programMode === 'auto_ae'}
               value={[isoToSlider(settings.iso)]}
               onValueChange={([value]) => {
                 const newISO = sliderToISO(value);
                 let next = { ...settings, iso: newISO };
 
                 if (programMode === 'aperture_priority') {
-                  // Av: user controls aperture/ISO, shutter is computed
-                  next.shutterSeconds = solveShutterForRefEV(
-                    next.aperture,
-                    next.iso
-                  );
+                  next.shutterSeconds = solveShutterForRefEV(next.aperture, next.iso);
                 } else if (programMode === 'shutter_priority') {
-                  // Tv: user controls shutter/ISO, aperture is computed
-                  next.aperture = solveApertureForRefEV(
-                    next.shutterSeconds,
-                    next.iso
-                  );
+                  next.aperture = solveApertureForRefEV(next.shutterSeconds, next.iso);
                 }
 
                 onSettingsChange(next);
@@ -340,8 +330,8 @@ export function ManualModePanel({
               max={100}
               step={1}
             />
-          </div>
-        )}
+          )}
+        </div>
 
       </CardContent>
     </Card>

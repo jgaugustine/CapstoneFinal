@@ -1,4 +1,5 @@
-import { Link } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { Link, useLocation } from "react-router-dom";
 import { ArrowLeft, BookOpen } from "lucide-react";
 import { Header } from "@/components/Header";
 import { VOCAB_TERMS } from "@/lib/vocab";
@@ -16,6 +17,9 @@ const CATEGORY_ORDER = [
 ];
 
 export default function Vocab() {
+  const location = useLocation();
+  const [highlightedId, setHighlightedId] = useState<string | null>(null);
+
   const byCategory = CATEGORY_ORDER.reduce<Record<string, typeof VOCAB_TERMS>>(
     (acc, cat) => {
       acc[cat] = VOCAB_TERMS.filter((t) => t.category === cat);
@@ -23,6 +27,21 @@ export default function Vocab() {
     },
     {}
   );
+
+  useEffect(() => {
+    const hash = location.hash.slice(1); // remove leading #
+    if (!hash) {
+      setHighlightedId(null);
+      return;
+    }
+    setHighlightedId(hash);
+    const el = document.getElementById(hash);
+    if (el) {
+      el.scrollIntoView({ behavior: "smooth", block: "center" });
+      const timer = setTimeout(() => setHighlightedId(null), 2500);
+      return () => clearTimeout(timer);
+    }
+  }, [location.hash]);
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -67,7 +86,11 @@ export default function Vocab() {
                     <div
                       key={term.id}
                       id={term.id}
-                      className="scroll-mt-24"
+                      className={`scroll-mt-24 rounded-lg px-3 py-2 -mx-3 transition-colors duration-500 ${
+                        highlightedId === term.id
+                          ? "bg-primary/15 ring-2 ring-primary/50"
+                          : ""
+                      }`}
                     >
                       <dt className="font-medium text-foreground">
                         {term.term}

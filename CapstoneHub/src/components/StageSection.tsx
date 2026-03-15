@@ -87,10 +87,12 @@ export function StageSection({ stage, onBeforeNavigate }: StageSectionProps) {
             {stage.articles.map((article) => {
               const href = `/articles/${article.fullSlug ?? article.slug}`;
               return (
-                <article
+                <Link
                   key={article.slug}
+                  to={href}
+                  onClick={onBeforeNavigate}
                   className={cn(
-                    "rounded-lg border border-border/60 bg-card p-4 transition-colors hover:border-border",
+                    "block rounded-lg border border-border/60 bg-card p-4 transition-colors hover:border-border cursor-pointer",
                     STAGE_BORDER_L_CLASSES[stage.id]
                   )}
                 >
@@ -100,18 +102,16 @@ export function StageSection({ stage, onBeforeNavigate }: StageSectionProps) {
                   <p className="text-sm text-muted-foreground mb-3 line-clamp-3">
                     {article.summary}
                   </p>
-                  <Link
-                    to={href}
-                    onClick={onBeforeNavigate}
+                  <span
                     className={cn(
-                      "inline-flex items-center gap-1.5 text-sm font-medium hover:underline",
+                      "inline-flex items-center gap-1.5 text-sm font-medium",
                       STAGE_ACCENT_CLASSES[stage.id]
                     )}
                   >
                     Read article
                     <ExternalLink className="h-3.5 w-3.5" />
-                  </Link>
-                </article>
+                  </span>
+                </Link>
               );
             })}
           </div>
