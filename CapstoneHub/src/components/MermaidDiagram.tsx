@@ -15,14 +15,19 @@ export function MermaidDiagram({ chart }: MermaidDiagramProps) {
     const id = `mermaid-${Math.random().toString(36).slice(2)}`;
     mermaid.initialize({
       startOnLoad: false,
-      theme: "dark",
+      // Light diagram theme so node labels stay dark (matches pastel classDef fills in articles).
+      theme: "default",
       themeVariables: {
-        primaryColor: "#3b82f6",
-        primaryTextColor: "#e5e7eb",
+        primaryColor: "#e5e7eb",
+        primaryTextColor: "#111827",
+        secondaryTextColor: "#111827",
+        tertiaryTextColor: "#111827",
         primaryBorderColor: "#6b7280",
-        lineColor: "#9ca3af",
-        secondaryColor: "#1f2937",
-        tertiaryColor: "#111827",
+        // Arrows stay visible on the app’s dark page background while labels stay dark on light nodes.
+        lineColor: "#94a3b8",
+        secondaryColor: "#f3f4f6",
+        tertiaryColor: "#ffffff",
+        background: "transparent",
       },
     });
     mermaid
