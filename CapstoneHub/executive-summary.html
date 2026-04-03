@@ -233,6 +233,11 @@
     .footer-block li { margin-bottom: 0.25rem; }
     .footer-block a { color: var(--primary); text-decoration: none; }
     .footer-block a:hover { text-decoration: underline; }
+    .footer-right-stack {
+      display: flex;
+      flex-direction: column;
+      gap: 2rem;
+    }
 
     /* Two-column layout: pipeline left, labs right */
     .print-body {
@@ -351,6 +356,7 @@
       .lab-card li { margin-bottom: 0.08rem; }
 
       .footer-grid { margin-top: 0.6rem; gap: 1rem; }
+      .footer-right-stack { gap: 1rem; }
       .footer-block h3 { font-size: 6.5pt; margin-bottom: 0.25rem; }
       .footer-block ul { font-size: 8pt; }
       .footer-block li { margin-bottom: 0.15rem; }
@@ -464,8 +470,9 @@
           <h4>ExposureLAB</h4>
           <p>Adjust shutter, aperture, and ISO—see how each affects the image</p>
           <ul>
-            <li>Real-time exposure triangle simulator</li>
-            <li>Compare different metering scenarios</li>
+            <li>Real-time auto exposure algorithm breakdown</li>
+            <li>Compare different metering modes</li>
+            <li>Forward exposure simulation for camera settings</li>
           </ul>
         </div>
       </a>
@@ -478,7 +485,7 @@
           <p>See how many shades of gray a sensor can capture</p>
           <ul>
             <li>Compare 8-bit vs 12-bit vs 14-bit</li>
-            <li>Visualize quantization and posterization</li>
+            <li>Visualize quantization and posterization errors</li>
           </ul>
         </div>
       </a>
@@ -492,6 +499,7 @@
           <ul>
             <li>Compare demosaicing algorithms (bilinear, nearest-neighbor, etc.)</li>
             <li>Upload test images or use built-in patterns</li>
+            <li>Benchmark and compare runtimes and errors from different demosaicing algorithms</li>
           </ul>
         </div>
       </a>
@@ -501,10 +509,12 @@
         </div>
         <div>
           <h4>ImageLab</h4>
-          <p>Explore tone mapping, color, and image compression</p>
+          <p>Explore the math of image post-processing</p>
           <ul>
-            <li>Tone curves, hue/saturation, and color transforms</li>
-            <li>Compression and upsampling visualization</li>
+            <li>Visualize edits as vector operations</li>
+            <li>Compare different color spaces</li>
+            <li>Explore convolution operations</li>
+            <li>Understand the effect of edit order on the final image</li>
           </ul>
         </div>
       </a>
@@ -514,25 +524,34 @@
       <div class="footer-block">
         <h3>Math Concepts</h3>
         <ul>
-          <li>Photon statistics, shot noise, signal-to-noise ratio</li>
-          <li>Exposure value and logarithmic scales</li>
-          <li>Gaussian kernels for blur and center-weighted metering</li>
-          <li>Convolution, kernel matrices, dot products over neighborhoods</li>
-          <li>Gradient operators (Sobel, Prewitt, Laplacian) for edges</li>
-          <li>RGB as vectors, luminance as weighted combination</li>
-          <li>Color space transforms, HSL rotations</li>
-          <li>Bilinear and polynomial interpolation for demosaicing</li>
-          <li>Quantization, bit depth, PSNR, MSE</li>
-          <li>Live at <a href="https://grantcapstone.netlify.app/">grantcapstone.netlify.app</a></li>
+          <li>Poisson processes and counting statistics</li>
+          <li>Signal-to-noise ratio (SNR) and variance propagation</li>
+          <li>Logarithms, exposure value (EV), and powers-of-two stop scaling</li>
+          <li>Weighted averages and spatial weighting functions</li>
+          <li>Discrete convolution and kernel matrix multiplication</li>
+          <li>Dot products over local neighborhoods</li>
+          <li>Discrete gradients, partial derivatives, and Laplacian operators</li>
+          <li>Interpolation methods (nearest-neighbor, bilinear, polynomial)</li>
+          <li>Sampling theory, aliasing, and Nyquist frequency</li>
         </ul>
       </div>
-      <div class="footer-block">
-        <h3>Who It's For</h3>
-        <ul>
-          <li><strong>Photographers</strong> who want to understand their gear</li>
-          <li><strong>Students and educators</strong> looking for alternative applications of math</li>
-          <li><strong>Hobbyists</strong> curious about camera technology</li>
-        </ul>
+      <div class="footer-right-stack">
+        <div class="footer-block">
+          <ul aria-label="Math concepts (continued)">
+            <li>Quantization error analysis and step-size modeling</li>
+            <li>Mean squared error (MSE) and peak signal-to-noise ratio (PSNR)</li>
+            <li>Vector spaces for RGB color representation</li>
+            <li>Linear transformations and change of basis in color spaces</li>
+            <li>Rotation matrices for hue transforms</li>
+          </ul>
+        </div>
+        <div class="footer-block">
+          <h3>Who It's For</h3>
+          <ul>
+            <li><strong>Photographers</strong> who want to understand how cameras and editing works</li>
+            <li><strong>Students and educators</strong> looking for alternative applications of these math concepts</li>
+          </ul>
+        </div>
       </div>
     </div>
     </div>

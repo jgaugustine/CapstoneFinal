@@ -1,4 +1,4 @@
-# ISO, Shot Noise, SNR — Why Raising ISO Makes Noise Visible
+const e=`# ISO, Shot Noise, SNR — Why Raising ISO Makes Noise Visible
 
 Up to now, we’ve treated light as a steady stream of energy—photons arriving and filling photosite wells predictably. But light, in reality, is quantized and stochastic. Photons arrive one by one, at random intervals, following the rules of probability. Even under constant illumination, this randomness means that each photosite receives a slightly different number of photons every exposure.
 
@@ -8,26 +8,26 @@ This randomness is called **shot noise** [1][3].
 
 When photon arrivals are independent and equally probable over time, the count of arrivals ( $N$ ) in a fixed interval follows a **Poisson distribution** [1][2]**.**
 
-$P(k, \lambda) = \frac{\lambda^k e^{-\lambda}}{k!}$
+$P(k, \\lambda) = \\frac{\\lambda^k e^{-\\lambda}}{k!}$
 
 where
 
 - ( $k$ ) = number of photon arrivals,
-- ( $\lambda$ ) = expected number of arrivals (the mean).
+- ( $\\lambda$ ) = expected number of arrivals (the mean).
 
 The defining property of a Poisson process is that its variance equals its mean [2][4]:
 
-$\sigma_N^2 = \lambda \quad \Rightarrow \quad \sigma_N = \sqrt{\lambda}$
+$\\sigma_N^2 = \\lambda \\quad \\Rightarrow \\quad \\sigma_N = \\sqrt{\\lambda}$
 
-Thus, even if two photosites receive identical illumination (same $\lambda$), their actual photon counts will differ slightly by roughly  $\pm\sqrt{\lambda}$  due to random chance.
+Thus, even if two photosites receive identical illumination (same $\\lambda$), their actual photon counts will differ slightly by roughly  $\\pm\\sqrt{\\lambda}$  due to random chance.
 
 The **signal-to-noise ratio (SNR)** for photon shot noise is then:
 
-$\text{SNR} = \frac{N}{\sqrt{N}} = \sqrt{N}$
+$\\text{SNR} = \\frac{N}{\\sqrt{N}} = \\sqrt{N}$
 
 This simple relation shows that collecting more photons improves SNR—but only as the square root of the signal. Doubling exposure time or aperture area (2× more photons) increases SNR by only about 1.4×, not 2× [3].
 
-| Mean photon count ($N$) | Std. dev. ( $\sqrt{N}$ ) | Relative noise ( $\frac{\sigma}{N}$ ) |
+| Mean photon count ($N$) | Std. dev. ( $\\sqrt{N}$ ) | Relative noise ( $\\frac{\\sigma}{N}$ ) |
 | --- | --- | --- |
 | 25 | 5 | 20% |
 | 100 | 10 | 10% |
@@ -39,11 +39,11 @@ At high photon counts, the random fluctuation becomes negligible. But in the dar
 
 The randomness of photons translates directly into electron counts in the photosites. Each photon that generates an electron (based on the sensor’s quantum efficiency) contributes to the signal:
 
-$N_e = QE \times N_\text{photons}$
+$N_e = QE \\times N_\\text{photons}$
 
 Since the conversion process is linear, the same Poisson variance applies to electrons:
 
-$\sigma_e = \sqrt{N_e}$
+$\\sigma_e = \\sqrt{N_e}$
 
 This **shot noise** is irreducible: even an ideal, noiseless sensor will exhibit it, because it arises from the fundamental statistics of light [1][4][5].
 
@@ -61,35 +61,35 @@ At **base ISO**, the amplifier is calibrated so that full-well capacity roughly 
 
 Mathematically, if ($G$) is the analog gain (proportional to ISO), and ($S$) is the signal voltage per electron, then:
 
-$V_\text{out} = G \times S \times N_e$
+$V_\\text{out} = G \\times S \\times N_e$
 
-The ADC clips when  $V_\text{out} \geq V_\text{max}$ .
+The ADC clips when  $V_\\text{out} \\geq V_\\text{max}$ .
 
 Therefore, the effective maximum number of electrons before clipping shrinks with ISO:
 
-$N_{e,\text{max}} = \frac{V_\text{max}}{G S}$
+$N_{e,\\text{max}} = \\frac{V_\\text{max}}{G S}$
 
-Every doubling of ISO halves  $N_{e,\text{max}}$ , cutting highlight headroom and reducing the usuable range (the **dynamic range** - more on this later) [10][12].
+Every doubling of ISO halves  $N_{e,\\text{max}}$ , cutting highlight headroom and reducing the usuable range (the **dynamic range** - more on this later) [10][12].
 
 ### Why High ISO Looks “Noisy”
 
-At low ISO and bright light, each photosite might collect 20,000 electrons. The shot noise is $\sqrt{20{,}000} = 141~\mathrm{e}^-$, just 0.7% of the signal—imperceptible.
+At low ISO and bright light, each photosite might collect 20,000 electrons. The shot noise is $\\sqrt{20{,}000} = 141~\\mathrm{e}^-$, just 0.7% of the signal—imperceptible.
 
-In dim light, suppose only 100 electrons are captured. Shot noise is $\sqrt{100} = 10~\mathrm{e}^-$—a 10% variation. When the amplifier boosts both signal and noise, that 10% fluctuation becomes visible as grain [5][13].
+In dim light, suppose only 100 electrons are captured. Shot noise is $\\sqrt{100} = 10~\\mathrm{e}^-$—a 10% variation. When the amplifier boosts both signal and noise, that 10% fluctuation becomes visible as grain [5][13].
 
 At the same time, electronic read noise (thermal and circuit noise) remains roughly constant in electrons but gets amplified too, contributing more to the final image. The combined noise (shot + read) becomes:
 
-$\sigma_\text{total} = \sqrt{\sigma_\text{shot}^2 + \sigma_\text{read}^2}$
+$\\sigma_\\text{total} = \\sqrt{\\sigma_\\text{shot}^2 + \\sigma_\\text{read}^2}$
 
-In bright conditions,  $\sigma_\text{shot} \gg \sigma_\text{read}$ , so the total is dominated by photon statistics. In the dark,  $\sigma_\text{read}$  may dominate, leading to shadow noise and banding [5].
+In bright conditions,  $\\sigma_\\text{shot} \\gg \\sigma_\\text{read}$ , so the total is dominated by photon statistics. In the dark,  $\\sigma_\\text{read}$  may dominate, leading to shadow noise and banding [5].
 
 ### ISO and Dynamic Range Tradeoff
 
 Dynamic range (DR) can be roughly modeled as:
 
-$\text{DR} = 20 \log_{10}!\left(\frac{N_{e,\text{max}}}{\sigma_\text{read}}\right)$
+$\\text{DR} = 20 \\log_{10}!\\left(\\frac{N_{e,\\text{max}}}{\\sigma_\\text{read}}\\right)$
 
-As ISO increases,  $N_{e,\text{max}}$  decreases while  $\sigma_\text{read}$  (in output units) stays constant or rises slightly, compressing the usable range. This is why cameras lose highlight detail at high ISO even though shadows become visible—the upper bound collapses faster than the lower bound improves [10][12].
+As ISO increases,  $N_{e,\\text{max}}$  decreases while  $\\sigma_\\text{read}$  (in output units) stays constant or rises slightly, compressing the usable range. This is why cameras lose highlight detail at high ISO even though shadows become visible—the upper bound collapses faster than the lower bound improves [10][12].
 
 Dual-gain and modern back-illuminated sensors mitigate this by switching to higher conversion gain in low light, but they cannot escape the fundamental physics: ISO can amplify signal, not information [11].
 
@@ -97,7 +97,7 @@ Dual-gain and modern back-illuminated sensors mitigate this by switching to high
 
 What we perceive as *grain* in a high-ISO photo is the visual expression of photon randomness. Each pixel’s brightness jitters around its true mean value because it counted a slightly different number of photons. 
 
-This is why long exposures, wide apertures, or higher quantum efficiency all reduce visible noise: they collect more photons, increasing ( $N_e$ ) and thereby improving SNR as ( $\sqrt{N_e}$ ).
+This is why long exposures, wide apertures, or higher quantum efficiency all reduce visible noise: they collect more photons, increasing ( $N_e$ ) and thereby improving SNR as ( $\\sqrt{N_e}$ ).
 
 ![**Figure 1 ****Simulated photon arrival histograms under equal illumination: top, bright light (large $N$, small relative variance); bottom, dim light (small $N$, large relative variance). Both follow Poisson statistics, but amplification at high ISO exposes the stochastic pattern of light itself. The low light follows ~Poisson(10) and the bright light ~Poisson(1000) [6][7].](ISO,%20Shot%20Noise,%20SNR%20%E2%80%94%20Why%20Raising%20ISO%20Makes%20Noise/Screenshot_2025-10-26_at_3.42.44_PM.png)
 
@@ -111,13 +111,13 @@ The histograms in Figure 1 reveal the statistical behavior of photon arrivals at
 
 This is where shot noise transforms from an abstract probability distribution into visible grain.
 
-Consider a camera sensor pointed at a uniform surface under two different lighting conditions. In bright light, each pixel might collect ( $\lambda = 1024$) photons during the exposure. In dim light, only ( $\lambda = 16$) photons arrive at each pixel. If light were deterministic, all pixels in each scene would record identical counts, producing perfectly smooth images.
+Consider a camera sensor pointed at a uniform surface under two different lighting conditions. In bright light, each pixel might collect ( $\\lambda = 1024$) photons during the exposure. In dim light, only ( $\\lambda = 16$) photons arrive at each pixel. If light were deterministic, all pixels in each scene would record identical counts, producing perfectly smooth images.
 
 But light is not deterministic. Each photosite independently samples from its respective Poisson distribution, creating pixel-to-pixel variation even when viewing a uniform surface [1][2]:
 
-Bright scene: The Poisson statistics dictate a standard deviation of ( $\sqrt{1024} = 32$) photons. This $±32$  photon variation represents only $32/1024 = 3.2$% of the mean—imperceptible to the eye. Neighboring pixels differ by at most a few percent.
+Bright scene: The Poisson statistics dictate a standard deviation of ( $\\sqrt{1024} = 32$) photons. This $±32$  photon variation represents only $32/1024 = 3.2$% of the mean—imperceptible to the eye. Neighboring pixels differ by at most a few percent.
 
-Dim scene: The standard deviation is ($\sqrt{16} = 4$) photons, representing $4/16=25$%  of the mean—a dramatically different relative magnitude. Neighboring pixels that should look identical can differ by factors of nearly $2×$. One pixel might capture 12 photons while its neighbor captures 20—both perfectly normal outcomes from the same ~Poisson(16) distribution, but wildly different in relative terms.
+Dim scene: The standard deviation is ($\\sqrt{16} = 4$) photons, representing $4/16=25$%  of the mean—a dramatically different relative magnitude. Neighboring pixels that should look identical can differ by factors of nearly $2×$. One pixel might capture 12 photons while its neighbor captures 20—both perfectly normal outcomes from the same ~Poisson(16) distribution, but wildly different in relative terms.
 
 ![**Figure 2**: Spatial shot noise visualization showing three images of a uniform surface. Left: bright scene (1024 photons/pixel) at ISO 100 produces a smooth mid-gray image with 3.2% relative noise. Middle: dim scene (16 photons/pixel) at ISO 100 produces an underexposed, nearly black image—the noise exists but is invisible. Right: the identical photon counts from the middle panel, amplified at ISO 6400 (6400/base ISO = 64), produces a properly exposed but grainy image. The grain arises not from the ISO setting, but from the 26% relative variance inherent in capturing only 16 photons per pixel. ](ISO,%20Shot%20Noise,%20SNR%20%E2%80%94%20Why%20Raising%20ISO%20Makes%20Noise/image.png)
 
@@ -131,9 +131,9 @@ Lets make this more explicit, zooming in on a 5x5 grid, Figure 3 shows the photo
 
 The 26% relative variance was always present in the photon counts; high ISO simply makes it visible by lifting it above the noise floor.
 
-![**Figure 4:** Top: Cross-section along a single row shows pixel-to-pixel fluctuation. The bright scene (green) varies gently by $±8$% around its mean. The dim scene at high ISO (red) swings wildly by $±50$% despite all pixels viewing the same uniform surface—this is the visible grain. Bottom: Histograms of all 400 pixels. The bright scene clusters in a tight distribution ($3.2$% coefficient of variation), while the amplified dim scene spreads across the full tonal range ($25$% coefficient of variation). Both distributions follow Poisson statistics; the dramatic difference in appearance stems from the square-root scaling of shot noise: ( $\sigma/\mu = 1/\sqrt{N}$ ).](ISO,%20Shot%20Noise,%20SNR%20%E2%80%94%20Why%20Raising%20ISO%20Makes%20Noise/image%201.png)
+![**Figure 4:** Top: Cross-section along a single row shows pixel-to-pixel fluctuation. The bright scene (green) varies gently by $±8$% around its mean. The dim scene at high ISO (red) swings wildly by $±50$% despite all pixels viewing the same uniform surface—this is the visible grain. Bottom: Histograms of all 400 pixels. The bright scene clusters in a tight distribution ($3.2$% coefficient of variation), while the amplified dim scene spreads across the full tonal range ($25$% coefficient of variation). Both distributions follow Poisson statistics; the dramatic difference in appearance stems from the square-root scaling of shot noise: ( $\\sigma/\\mu = 1/\\sqrt{N}$ ).](ISO,%20Shot%20Noise,%20SNR%20%E2%80%94%20Why%20Raising%20ISO%20Makes%20Noise/image%201.png)
 
-**Figure 4:** Top: Cross-section along a single row shows pixel-to-pixel fluctuation. The bright scene (green) varies gently by $±8$% around its mean. The dim scene at high ISO (red) swings wildly by $±50$% despite all pixels viewing the same uniform surface—this is the visible grain. Bottom: Histograms of all 400 pixels. The bright scene clusters in a tight distribution ($3.2$% coefficient of variation), while the amplified dim scene spreads across the full tonal range ($25$% coefficient of variation). Both distributions follow Poisson statistics; the dramatic difference in appearance stems from the square-root scaling of shot noise: ( $\sigma/\mu = 1/\sqrt{N}$ ).
+**Figure 4:** Top: Cross-section along a single row shows pixel-to-pixel fluctuation. The bright scene (green) varies gently by $±8$% around its mean. The dim scene at high ISO (red) swings wildly by $±50$% despite all pixels viewing the same uniform surface—this is the visible grain. Bottom: Histograms of all 400 pixels. The bright scene clusters in a tight distribution ($3.2$% coefficient of variation), while the amplified dim scene spreads across the full tonal range ($25$% coefficient of variation). Both distributions follow Poisson statistics; the dramatic difference in appearance stems from the square-root scaling of shot noise: ( $\\sigma/\\mu = 1/\\sqrt{N}$ ).
 
 The top panel shows a cross-section along a single row of pixels—a horizontal slice through each image:
 
@@ -159,7 +159,7 @@ The only solutions are to collect more photons:
 - Larger pixels: Greater collection area per pixel
 - Brighter scene: More photons emitted
 
-Going from ( $\lambda = 16$) to ( $\lambda = 1024$ )—a $64×$ increase—reduces relative noise from $25$% to $3.2$%, an $8×$ improvement in SNR (since $\sqrt{64} = 8$). This is the power of the square-root law: noise improves not linearly with photon count, but as ($\sqrt{N}$ ).
+Going from ( $\\lambda = 16$) to ( $\\lambda = 1024$ )—a $64×$ increase—reduces relative noise from $25$% to $3.2$%, an $8×$ improvement in SNR (since $\\sqrt{64} = 8$). This is the power of the square-root law: noise improves not linearly with photon count, but as ($\\sqrt{N}$ ).
 
 This is the photon shot noise limit: the theoretical best performance of any imaging system, bounded not by electronics or manufacturing, but by the nature of light itself [1][3][5].
 
@@ -185,4 +185,4 @@ Code here:
 10. PhotoPXL (2020). "Noise, ISO and Dynamic Range Explained." [https://photopxl.com/noise-iso-and-dynamic-range-explained/](https://photopxl.com/noise-iso-and-dynamic-range-explained/)
 11. Digital Photography Review (2023). "Ins and outs of ISO: where ISO gets complex." [https://www.dpreview.com/articles/5426898916/ins-and-outs-of-iso-where-iso-gets-complex](https://www.dpreview.com/articles/5426898916/ins-and-outs-of-iso-where-iso-gets-complex)
 12. Grey Scale Motion Pictures (2020). "Understanding ISO selection vs. Effective Dynamic Range." [https://greyscalemp.com/blog/2020/2/25/iso-choice-vs-effect-dynamic-range](https://greyscalemp.com/blog/2020/2/25/iso-choice-vs-effect-dynamic-range)
-13. Photography Stack Exchange. "Is Poisson Noise a significant source of noise for typical photography?" [https://photo.stackexchange.com/questions/37850/](https://photo.stackexchange.com/questions/37850/)
+13. Photography Stack Exchange. "Is Poisson Noise a significant source of noise for typical photography?" [https://photo.stackexchange.com/questions/37850/](https://photo.stackexchange.com/questions/37850/)`;export{e as default};

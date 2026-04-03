@@ -1,4 +1,4 @@
-# Light → Image — Cameras as Photon Counters
+const e=`# Light → Image — Cameras as Photon Counters
 
 When we talk about cameras, we often say they “capture” a scene, as if they’re little boxes that somehow swallow reality whole. But at the hardware level, a camera is a photon counter. 
 
@@ -51,4 +51,4 @@ Quantum efficiency determines how far into the dark a camera can see. A sensor w
 
 [7] Teledyne. (n.d.-d). Quantum efficiency. [https://www.teledynevisionsolutions.com/learn/learning-center/imaging-fundamentals/quantum-efficiency/](https://www.teledynevisionsolutions.com/learn/learning-center/imaging-fundamentals/quantum-efficiency/) 
 
-[8] From photosites to pixels (I) – the process. Crafting Pixels. (2021, May 10). [https://pixelcraft.photo.blog/2021/05/10/from-photosites-to-pixels-i-the-process/](https://pixelcraft.photo.blog/2021/05/10/from-photosites-to-pixels-i-the-process/)
+[8] From photosites to pixels (I) – the process. Crafting Pixels. (2021, May 10). [https://pixelcraft.photo.blog/2021/05/10/from-photosites-to-pixels-i-the-process/](https://pixelcraft.photo.blog/2021/05/10/from-photosites-to-pixels-i-the-process/)`;export{e as default};
