@@ -1,4 +1,4 @@
-# Bit Depth & Dynamic Range— How Many Shades Can We Encode?
+const e=`# Bit Depth & Dynamic Range— How Many Shades Can We Encode?
 
 As we discussed, digital camera sensor begins with a physical measurement: light energy arriving at each photosite (often called a “pixel” on the sensor). In a widely used linear model, incoming photons generate charge (electrons), that charge is converted to a voltage, amplified by the camera’s electronics, and finally converted to a digital signal by an analog-to-digital converter (ADC) [1].
 
@@ -13,15 +13,15 @@ Bit depth, in its most general sense, describes how many distinct levels can be 
 For an idealized ADC, the “step size” (the least significant bit, LSB) is set by the full-scale input range (FSR) divided by the number of quantization steps. A common ideal form is:
 
 $$
-\text{LSB size} \approx \frac{\text{FSR}}{2^N}
+\\text{LSB size} \\approx \\frac{\\text{FSR}}{2^N}
 $$
 
-and the conversion introduces a quantization uncertainty bounded on the order of $\pm \tfrac{1}{2}$ LSB [5]. The analog world is continuous, but the recorded number must land on one of a finite set of rungs [5].
+and the conversion introduces a quantization uncertainty bounded on the order of $\\pm \\tfrac{1}{2}$ LSB [5]. The analog world is continuous, but the recorded number must land on one of a finite set of rungs [5].
 
 A concrete example shows why extra bits mean finer gradations. If the analog range presented to the ADC (after amplification) corresponds to 0 to 1.0 V, then:
 
-- a 12-bit ADC maps that span into $2^{12}=4096$ steps, or about $1/4096 \approx 0.000244$ V per step,
-- a 14-bit ADC maps it into $2^{14}=16384$ steps, or about $1/16384 \approx 0.000061$ V per step.
+- a 12-bit ADC maps that span into $2^{12}=4096$ steps, or about $1/4096 \\approx 0.000244$ V per step,
+- a 14-bit ADC maps it into $2^{14}=16384$ steps, or about $1/16384 \\approx 0.000061$ V per step.
 
 So going from 12-bit to 14-bit does not add a new “kind” of information, but it does make each brightness increment about four times finer (because $2^{14}/2^{12}=4$) [6].  That finer slicing is one reason higher bit depth can reduce visible banding/posterization when you later stretch tones in editing—because your adjustments are less likely to reveal the “rungs” in smooth gradients.
 
@@ -39,7 +39,7 @@ In the language we discussed earlier, its the ratio of full well capacity (elect
 
 Bit depth and dynamic range are tightly coupled in practice, but they answer different questions. One of the clearest metaphors is: dynamic range is the height of a staircase; bit depth is the number of steps [6].  A high-bit-depth ADC gives you many steps, but it does not magically make the staircase taller if sensor noise and saturation remain unchanged [6].
 
-This is where quantization matters. If the ADC has *too few* bits for the sensor’s usable range, the step size can become large enough that quantization error becomes a meaningful part of the noise floor. Ideal quantization error is bounded around $\pm \tfrac{1}{2}$ LSB, so coarse steps translate into rounding (figure 2).  
+This is where quantization matters. If the ADC has *too few* bits for the sensor’s usable range, the step size can become large enough that quantization error becomes a meaningful part of the noise floor. Ideal quantization error is bounded around $\\pm \\tfrac{1}{2}$ LSB, so coarse steps translate into rounding (figure 2).  
 
 ![**Figure 2:** Quantization of a continuous analog signal by an ideal ADC. The straight line represents the ideal linear relationship between analog input and digital output, while the stair-step curve shows the discrete output codes produced by finite bit depth. Each step corresponds to one least significant bit (LSB), and each digital code represents a finite range of input values centered on its midstep value. The lower plot illustrates the resulting quantization error, which is inherently bounded between −½ LSB and +½ LSB. This error reflects the unavoidable rounding introduced when a continuous signal is encoded into discrete digital levels. Retrieved from [https://www.ti.com/lit/an/slaa013/slaa013.pdf](https://www.ti.com/lit/an/slaa013/slaa013.pdf)](Bit%20Depth%20&%20Dynamic%20Range%E2%80%94%20How%20Many%20Shades%20Can%20We%20/Screenshot_2026-02-24_at_1.02.26_PM.png)
 
@@ -85,4 +85,4 @@ In editing workflows, it’s also common to process RAW into higher-bit-depth wo
 
 [12] Hasselblad. (n.d.). *X2D 100C*. [https://www.hasselblad.com/x-system/x2d-100c/](https://www.hasselblad.com/x-system/x2d-100c/)
 
-[13] Capture One. (n.d.). *Phase One RAW files option*. [https://support.captureone.com/hc/en-us/articles/360002564358-Phase-One-RAW-files-option](https://support.captureone.com/hc/en-us/articles/360002564358-Phase-One-RAW-files-option)
+[13] Capture One. (n.d.). *Phase One RAW files option*. [https://support.captureone.com/hc/en-us/articles/360002564358-Phase-One-RAW-files-option](https://support.captureone.com/hc/en-us/articles/360002564358-Phase-One-RAW-files-option)`;export{e as default};

@@ -1,4 +1,4 @@
-# Pixels, Wells, and Readout — Architecture and Limits
+const e=`# Pixels, Wells, and Readout — Architecture and Limits
 
 ### The Readout Chain
 
@@ -88,4 +88,4 @@ Recognizing that each “pixel” is a physical photosite with a finite well and
 - [4] *What is dynamic range in CCD cameras CCD meaning*. Oxford Instruments. (n.d.). https://andor.oxinst.com/learning/view/article/dynamic-range-and-full-well-capacity
 - [5] CloudyNights forum (Nov. 2017). “A little confused about full well and read noise” (Beginning Deep Sky Imaging). https://**www.cloudynights.com**/forums/topic/600061-a-little-confused-about-full-well-and-read-noise/
 - [6]  Teledyne Vision Solutions (2020s). *“Bit Depth, Full Well, and Dynamic Range,”* Teledyne Learning Center. https://**www.teledynevisionsolutions.com**/learn/learning-center/imaging-fundamentals/bit-depth-full-well-and-dynamic-range/
-- [7]  Matt Grum (2013). *“Why is a low base (minimum) ISO desirable in stills cameras?”* Photography StackExchange [https://photo.stackexchange.com/questions/34841/why-is-a-low-base-minimum-iso-desirable-in-stills-cameras](https://photo.stackexchange.com/questions/34841/why-is-a-low-base-minimum-iso-desirable-in-stills-cameras#:~:text=If%20we%20bump%20up%20to,Sensor%20A%27s%20max%20sat%20is)
+- [7]  Matt Grum (2013). *“Why is a low base (minimum) ISO desirable in stills cameras?”* Photography StackExchange [https://photo.stackexchange.com/questions/34841/why-is-a-low-base-minimum-iso-desirable-in-stills-cameras](https://photo.stackexchange.com/questions/34841/why-is-a-low-base-minimum-iso-desirable-in-stills-cameras#:~:text=If%20we%20bump%20up%20to,Sensor%20A%27s%20max%20sat%20is)`;export{e as default};

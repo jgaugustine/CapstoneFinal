@@ -1,4 +1,4 @@
-# Exposure Programs — AE, Shutter, Aperture Priority, and the Optimization Triangle
+const e=`# Exposure Programs — AE, Shutter, Aperture Priority, and the Optimization Triangle
 
 ## **Auto Exposure: Constrained optimization**
 
@@ -9,7 +9,7 @@ If exposure is too low, you can raise electronic gain (ISO) to maintain tone rep
 EV is the metric that makes this optimization tractable. In photography, exposure value is commonly defined (at ISO 100) as:
 
 $$
-\mathrm{EV} = \log_{2}\left(\frac{N^{2}}{t}\right)
+\\mathrm{EV} = \\log_{2}\\left(\\frac{N^{2}}{t}\\right)
 $$
 
 where $N$ is the f-number (aperture) and $t$ is exposure time (seconds) [2].
@@ -24,7 +24,7 @@ EV is logarithmic: moving by 1 EV is a factor-of-two (one “step/stop”) cha
 
 A practical AE system usually follows a pipeline with four phases:
 
-- **Input:** a scene image (or preview), plus a weighting map (metering/ROI/saliency), plus priorities (e.g., midtone target, highlight tolerance $\eta_h$, shadow tolerance $\eta_s$).
+- **Input:** a scene image (or preview), plus a weighting map (metering/ROI/saliency), plus priorities (e.g., midtone target, highlight tolerance $\\eta_h$, shadow tolerance $\\eta_s$).
 - **EV sweep:** evaluate candidate exposures by simulating how the scene’s luminance distribution moves under exposure changes.
 - **Selection:** pick the EV that best meets an objective subject to tolerances (or relax tolerances when nothing fits).
 - **Allocation:** convert the chosen EV into shutter/aperture/ISO settings with quantization and constraint reporting.
@@ -35,15 +35,15 @@ Most AE systems are histogram-based, commonly decomposed into “histogram manip
 
 Why manipulate at all? Because raw histograms are easily hijacked by pixels you don’t want to optimize for: specular highlights, saturated bulbs, deep shadows, or small extreme regions. Clipping is especially pernicious: once highlights saturate, detail is unrecoverable, and sensor saturation is explicitly called out as a key failure mode for overexposure. As we previously discussed, this happens when the photosites overflow.
 
-A practical way to suppress extreme luminance values without needing a full semantic interpretation is using statistics. Compute $Q_1$, $Q_3$, and $\mathrm{IQR}=Q_3-Q_1$. Then define a lower and upper “fence”:
+A practical way to suppress extreme luminance values without needing a full semantic interpretation is using statistics. Compute $Q_1$, $Q_3$, and $\\mathrm{IQR}=Q_3-Q_1$. Then define a lower and upper “fence”:
 
 $$
-\text{low} = Q_1 - 1.5\,\mathrm{IQR}, \quad \text{high} = Q_3 + 1.5\,\mathrm{IQR}
+\\text{low} = Q_1 - 1.5\\,\\mathrm{IQR}, \\quad \\text{high} = Q_3 + 1.5\\,\\mathrm{IQR}
 $$
 
 [Understanding and interpreting boxplots, vector statistical diagram isolated on a white. Box plot, whisker plot explanation.](https://images.openai.com/static-rsc-3/NQOYo08yIQe-EKUO6bKR6h8J3Bu86jg-IE8wrZ5iAom1RWvOfL3rNIIm74yS83QC957rE6O7-7R2qgN2tn8zCjAtCA2G3VXr5GK72kKZTu8?purpose=inline)
 
-Pixels outside $[\text{low},\text{high}]$ are treated as outliers (not counted, or heavily down-weighted). This is the standard IQR outlier method taught in introductory statistics.
+Pixels outside $[\\text{low},\\text{high}]$ are treated as outliers (not counted, or heavily down-weighted). This is the standard IQR outlier method taught in introductory statistics.
 
 This fence is not “physically correct”; it is deliberately pragmatic. It says: “optimize exposure for the middle mass of the scene, not the tails.” That is often exactly what you want when tails correspond to sunlight glints, LEDs, or unusually deep shadows that would otherwise dominate decisions.
 
@@ -109,7 +109,7 @@ The risk is that saliency is not semantics. Highly salient highlights (neon sign
 Entropy AE makes a different philosophical choice: instead of pushing the histogram toward a midtone target, choose the exposure that maximizes information content in the image, measured by Shannon entropy of the histogram. The Shannon entropy definition (for a discrete distribution $p_i$) is [6]:
 
 $$
-H = -\sum_{i=1}^{k} p_i \log_2(p_i)
+H = -\\sum_{i=1}^{k} p_i \\log_2(p_i)
 $$
 
 In machine vision, this is appealing because maximizing entropy tends to produce images with richer, more diverse intensity distributions—often correlating with more usable features. An “entropy camera” framing explicitly argues for maximizing entropy to capture more information, using Shannon entropy as the metric [7].
@@ -128,7 +128,7 @@ The weakness is that entropy is not a perfect proxy for “loks good.” Maximum
 
 ## **AE Algorithm**
 
-```mermaid
+\`\`\`mermaid
 flowchart TD
   A["Image/Scene"] --> B["Weight map: full-frame / ROI / saliency"]
   B --> C["Robust in-range fence (IQR) + manipulated histogram"]
@@ -157,7 +157,7 @@ flowchart TD
   class F decision;
   class G,H,I,J optimize;
   class K output;
-```
+\`\`\`
 
 **Figure 4.** Flowchart of the auto exposure (AE) pipeline, from scene input and histogram construction through EV sweep, feasibility testing under ηh/ηs constraints, optimization, and final exposure allocation.
 
@@ -165,26 +165,26 @@ flowchart TD
 
 A common failure mode in AE design is pretending that all goals are equally important. In reality, AE often has a priority structure: “first, don’t blow out too much highlight detail; second, don’t crush too much shadow detail; then, among what remains, aim for my midtone target.” That is lexicographic reasoning: optimize the most important criterion first, then optimize the next without degrading the first, and so on [8].
 
-### **Tolerances: $\eta_h$ and $\eta_s$**
+### **Tolerances: $\\eta_h$ and $\\eta_s$**
 
 Define:
 
-- $\eta_h$ = **highlight tolerance**: maximum allowed fraction of metered pixels that may clip at the bright end (e.g., normalized luminance $\ge 1$).
-- $\eta_s$ = **shadow tolerance**: maximum allowed fraction of metered pixels that may crush at the dark end (e.g., normalized luminance $\le \varepsilon$).
+- $\\eta_h$ = **highlight tolerance**: maximum allowed fraction of metered pixels that may clip at the bright end (e.g., normalized luminance $\\ge 1$).
+- $\\eta_s$ = **shadow tolerance**: maximum allowed fraction of metered pixels that may crush at the dark end (e.g., normalized luminance $\\le \\varepsilon$).
 
 Excess exposure can clip or bloom highlights when the signal exceeds capacity, while insufficient exposure can force higher gain and lead to unacceptable noise.
 
-The shadow threshold $\varepsilon$ is often unspecified because “deep shadow” depends on encoding (RAW vs gamma-encoded preview), bit depth, and noise floor. A reasonable default for normalized linear luminance is $\varepsilon \in [10^{-3}, 10^{-2}]$ (roughly 0.1%–1% of full scale), or $\varepsilon = 1/255$ if you want a simple 8-bit intuition, but it should be tuned against sensor noise characteristics [1].
+The shadow threshold $\\varepsilon$ is often unspecified because “deep shadow” depends on encoding (RAW vs gamma-encoded preview), bit depth, and noise floor. A reasonable default for normalized linear luminance is $\\varepsilon \\in [10^{-3}, 10^{-2}]$ (roughly 0.1%–1% of full scale), or $\\varepsilon = 1/255$ if you want a simple 8-bit intuition, but it should be tuned against sensor noise characteristics [1].
 
-### **Relaxation using $L_1$, $L_2$, or $L_\infty$ penalties**
+### **Relaxation using $L_1$, $L_2$, or $L_\\infty$ penalties**
 
 When no candidate EV satisfies both clipping tolerances, you can relax constraints by penalizing violations. A simple approach is to measure the violation vector:
 
 $$
-v(EV) = \Big(\max(0, \text{highlightClip}(EV)-\eta_h),\ \max(0, \text{shadowClip}(EV)-\eta_s)\Big)
+v(EV) = \\Big(\\max(0, \\text{highlightClip}(EV)-\\eta_h),\\ \\max(0, \\text{shadowClip}(EV)-\\eta_s)\\Big)
 $$
 
-and select the EV minimizing $\|v(EV)\|_p$, where $p\in\{1,2,\infty\}$. Different norms reflect different “attitudes” toward imbalance: $L_\infty$ punishes the worst violation; $L_1$ sums violations; $L_2$ emphasizes larger violations smoothly.
+and select the EV minimizing $\\|v(EV)\\|_p$, where $p\\in\\{1,2,\\infty\\}$. Different norms reflect different “attitudes” toward imbalance: $L_\\infty$ punishes the worst violation; $L_1$ sums violations; $L_2$ emphasizes larger violations smoothly.
 
 ## **Allocation: EV to shutter, aperture, ISO and program modes**
 
@@ -211,7 +211,7 @@ A common set of split rules (expressed as EV contributions) is:
 - **Shutter-priority:** allocate EV to shutter first; distribute the remainder across aperture and ISO.
 - **Aperture-priority:** allocate EV to aperture first; distribute the remainder across shutter and ISO.
 - **ISO-priority:** keep ISO near base when possible; distribute EV across shutter and aperture.
-- **Balanced:** split evenly: $e_T=e_N=e_S=\mathrm{EV}/3$.
+- **Balanced:** split evenly: $e_T=e_N=e_S=\\mathrm{EV}/3$.
 
 This priority framing has direct support in industrial AE controls: “gain priority” keeps gain low (to minimize noise) and adjusts exposure time; “exposure priority” keeps exposure time short (to capture motion) and adjusts gain, switching only when limits are hit [9].
 
@@ -235,4 +235,4 @@ This priority framing has direct support in industrial AE controls: “gain prio
 
 [9] *Using auto exposure | teledyne vision solutions*. Teledyne. (n.d.). https://www.teledynevisionsolutions.com/support/support-center/application-note/iis/using-auto-exposure/  
 
-[10] *Exposure auto*. Basler Product Documentation. (n.d.). https://docs.baslerweb.com/exposure-auto
+[10] *Exposure auto*. Basler Product Documentation. (n.d.). https://docs.baslerweb.com/exposure-auto`;export{e as default};
